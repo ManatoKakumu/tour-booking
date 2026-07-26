@@ -1,0 +1,28 @@
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# .terraform.lock.hcl はあえて除外しない(再現性のためコミットする)
+
+# AWS
+.aws/
+
+# OS/Editor
+.DS_Store
+Thumbs.db
+*.swp
+
+# Claude Code(ローカル固有の許可リスト等・非公開メモ)
+.claude/
+CLAUDE.md
