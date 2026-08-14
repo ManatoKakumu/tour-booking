@@ -12,6 +12,10 @@ Step2〜8の全体構成図は[overall.drawio](overall.drawio)(draw.io形式)を
 
 | サービス | 状態 | ドキュメント |
 |---|---|---|
+| ネットワーク | 構築中 | [network.md](network.md) |
+| セキュリティグループ | 構築中 | [security-group.md](security-group.md) |
+| ALB | 構築中 | [alb.md](alb.md) |
+| Cognito | 構築中 | [cognito.md](cognito.md) |
 
 状態の値は「設計中 / 設計レビュー待ち / 設計差し戻し中 / 構築中 / 実装レビュー待ち / 完了」(`templates/design-review-template.md`の運用に準じる)。
 
