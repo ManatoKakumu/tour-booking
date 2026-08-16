@@ -96,3 +96,4 @@
 - [ ] 構築フェーズで、ALB証明書のドメイン名戦略を決定する
 - [ ] Terraformのbackend設定は、部分バックエンド設定(ADR-002方針)を踏襲する
 - [ ] ElastiCacheのB/C分離は、コンピュートB/Cレイヤーの清書時に別途対応する(既知の持ち越し事項)
+- [ ] ALB用SGのInboundルール(CloudFrontからの通信許可)は、CloudFrontレイヤー構築時にCloudFrontが自動生成するサービス管理型SG(`CloudFront-VPCOrigins-Service-SG`)を参照する形で追加する。現時点ではCloudFront自体が未構築のため、暫定的な管理プレフィックスリスト方式では追加しない
