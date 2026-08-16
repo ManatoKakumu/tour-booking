@@ -4,10 +4,18 @@ tour-bookingのAWSアーキテクチャを、サービス単位で設計・記�
 
 着手したサービスから`templates/design-doc-template.md`を使って`docs/architecture/<サービス名>.md`を作成し、下表にリンクを追加する。
 
+## 全体構成図
+
+Step2〜8の全体構成図は[overall.drawio](overall.drawio)(draw.io形式)を参照。
+
 ## サービス一覧
 
 | サービス | 状態 | ドキュメント |
 |---|---|---|
+| ネットワーク | 構築中 | [network.md](network.md) |
+| セキュリティグループ | 構築中 | [security-group.md](security-group.md) |
+| ALB | 構築中 | [alb.md](alb.md) |
+| Cognito | 構築中 | [cognito.md](cognito.md) |
 
 状態の値は「設計中 / 設計レビュー待ち / 設計差し戻し中 / 構築中 / 実装レビュー待ち / 完了」(`templates/design-review-template.md`の運用に準じる)。
 

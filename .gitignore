@@ -14,6 +14,7 @@ override.tf.json
 terraform.rc
 
 # .terraform.lock.hcl はあえて除外しない(再現性のためコミットする)
+backend.hcl
 
 # AWS
 .aws/
