@@ -97,3 +97,4 @@
 - [ ] Terraformのbackend設定は、部分バックエンド設定(ADR-002方針)を踏襲する
 - [ ] ElastiCacheのB/C分離は、コンピュートB/Cレイヤーの清書時に別途対応する(既知の持ち越し事項)
 - [ ] ALB用SGのInboundルール(CloudFrontからの通信許可)は、CloudFrontレイヤー構築時にCloudFrontが自動生成するサービス管理型SG(`CloudFront-VPCOrigins-Service-SG`)を参照する形で追加する。現時点ではCloudFront自体が未構築のため、暫定的な管理プレフィックスリスト方式では追加しない
+- [ ] S3向けGateway型VPCエンドポイント(`vpc_endpoint.tf`の`aws_vpc_endpoint.s3`)に、画像用バケットへアクセスを限定するエンドポイントポリシーを追加する。現時点では画像用バケット自体が別レイヤー(CloudFront/Route53/ACM/S3)で未構築のため、ポリシーなしで作成している
