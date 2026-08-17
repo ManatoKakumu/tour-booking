@@ -91,9 +91,15 @@
 
 ## 次のアクション
 
-- [ ] `docs/adr/003-rds-vs-aurora-selection.md`の中身(コンテキスト・選択肢・決定・理由)を記載する
-- [ ] KMSのデフォルトキー選定もADRの候補(ADR-003に含めるか別立てにするかは本人判断)
-- [ ] `deletion_protection`・`backup_retention_period`の方針を決め、`database.md`に追記する
-- [ ] `docs/architecture/README.md`のサービス一覧に「データベース」行を追加する
+- [x] `docs/adr/003-rds-vs-aurora-selection.md`の中身(コンテキスト・選択肢・決定・理由)を記載する
+- [ ] KMSのデフォルトキー選定もADRの候補(ADR-003に含めるか別立てにするかは本人判断、任意)
+- [ ] `deletion_protection`・`backup_retention_period`の方針を決め、`database.md`に追記する(Terraform実装時に決定してよい)
+- [x] `docs/architecture/README.md`のサービス一覧に「データベース」行を追加する
 - [ ] Terraform実装(`infra/database/`想定)に着手。`network-sg-alb`レイヤーの`db`サブネット・`rds-sg`を`terraform_remote_state`で参照する
 - [ ] コストの見積もりに、Secrets Manager+RDSの合計金額(約$43.67/月)を一行追加する(任意)
+
+## 2026-08-17 ADR-003確認
+
+`docs/adr/003-rds-vs-aurora-selection.md`の内容を確認。RPO/RTOが未決定であることを正しく「根拠として弱い」と表現し、Aurora優位な技術的論点(リードレプリカの共有ストレージ有無)も自ら認めた上でコスト・現状トラフィックを理由に見送る、という構成になっており、単純な結論ありきの理由付けになっていない。メンター起点の表現・非公開の前提(目新しさ・市場シェア)にも触れておらず、公開ADRとして問題ない内容。
+
+残る`deletion_protection`・`backup_retention_period`の方針は、設計をやり直す必要のある項目ではないため、Terraform実装と並行して決定・追記してよい。この時点で**設計フェーズは完了とし、Terraform実装に進んで問題ない**。
