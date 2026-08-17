@@ -92,11 +92,11 @@
 ## 次のアクション
 
 - [x] `docs/adr/003-rds-vs-aurora-selection.md`の中身(コンテキスト・選択肢・決定・理由)を記載する
-- [ ] KMSのデフォルトキー選定もADRの候補(ADR-003に含めるか別立てにするかは本人判断、任意)
-- [ ] `deletion_protection`・`backup_retention_period`の方針を決め、`database.md`に追記する(Terraform実装時に決定してよい)
+- [ ] KMSのデフォルトキー選定もADRの候補(ADR-003に含めるか別立てにするかは本人判断、任意・見送り)
+- [x] `deletion_protection`・`backup_retention_period`の方針を決め、`database.md`に追記する(Terraform実装時に決定してよい)
 - [x] `docs/architecture/README.md`のサービス一覧に「データベース」行を追加する
-- [ ] Terraform実装(`infra/database/`想定)に着手。`network-sg-alb`レイヤーの`db`サブネット・`rds-sg`を`terraform_remote_state`で参照する
-- [ ] コストの見積もりに、Secrets Manager+RDSの合計金額(約$43.67/月)を一行追加する(任意)
+- [x] Terraform実装(`infra/database/`想定)に着手。`network-sg-alb`レイヤーの`db`サブネット・`rds-sg`を`terraform_remote_state`で参照する
+- [x] コストの見積もりに、Secrets Manager+RDSの合計金額を一行追加する(任意、$44.07/月として反映済み)
 
 ## 2026-08-17 ADR-003確認
 
@@ -186,7 +186,15 @@
 
 ## 次のアクション
 
-- [ ] `database.md`のコスト見積もりに、マスターユーザー用シークレット(5個目)分を追加する
-- [ ] `deletion_protection`・`backup_retention_period`の決定内容と理由を`database.md`のセキュリティ設計に反映する(前回からの持ち越し)
-- [ ] 実際に`terraform apply`して動作確認するかどうかを判断する。`apply`する場合は、確認後に必ず`terraform destroy`する(コストガードレール通り)
-- [ ] `apply`する場合、CI/CD側(新チャット2)でのDBユーザー作成タスクとの接続(Secrets Manager ARNの受け渡し方法など)を、CI/CD側の設計時に詰める
+- [x] `database.md`のコスト見積もりに、マスターユーザー用シークレット(5個目)分を追加する
+- [x] `deletion_protection`・`backup_retention_period`の決定内容と理由を`database.md`のセキュリティ設計・可用性設計に反映する(前回からの持ち越し)
+- [x] 実際に`terraform apply`して動作確認するかどうかを判断する。`apply`する場合は、確認後に必ず`terraform destroy`する(コストガードレール通り)
+- [ ] CI/CD側(新チャット2)でのDBユーザー作成タスクとの接続(Secrets Manager ARNの受け渡し方法など)は、このレイヤーの範囲外のためCI/CD側の設計時に詰める(`.claude/DESIGN_NOTES.md`に橋渡しメモ記録済み)
+
+## 2026-08-18 apply/destroy確認・マージ準備
+
+`terraform apply`で実機確認を実施。RDS(`available`、MySQL 8.0.46、`db.t4g.micro`、Multi-AZ、`gp3`20GB、暗号化・パブリックアクセスブロック・`deletion_protection=false`・`backup_retention_period=0`いずれも設計通り)、Secrets Manager(アプリ用4つ+マスター用1つ、マスター用はローテーションも自動有効)を実機で確認。`database.md`との齟齬なし。
+
+確認後`terraform destroy`を実行。`skip_final_snapshot`未設定によるエラー、および一度目のdestroyで削除したSecrets Managerシークレットが30日の復旧猶予(`recovery_window_in_days`のデフォルト)で残り再作成に失敗する問題が発生したが、いずれも原因を特定し解消(`skip_final_snapshot = true`の追加、`recovery_window_in_days = 0`の追加、および残存シークレットの`--force-delete-without-recovery`)。最終的にRDSインスタンス・Secrets Manager・NAT Gateway・ALB・非デフォルトVPCいずれも0件であることをAWS CLIで確認済み。
+
+**データベースレイヤーはこれで完了とし、mainへのマージに進んで問題ありません。**

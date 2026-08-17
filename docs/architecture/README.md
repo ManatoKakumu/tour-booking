@@ -6,7 +6,7 @@ tour-bookingのAWSアーキテクチャを、サービス単位で設計・記�
 
 ## 全体構成図
 
-Step2〜8の全体構成図は[overall.drawio](overall.drawio)(draw.io形式)を参照。
+Step2〜8の全体構成図は[overall.drawio.png](overall.drawio.png)を参照。PNG形式だが、draw.io(app.diagrams.net)の元データを埋め込んだ状態でエクスポートしているため、同ツールで開けばそのまま編集できる。
 
 ## サービス一覧
 
@@ -16,7 +16,7 @@ Step2〜8の全体構成図は[overall.drawio](overall.drawio)(draw.io形式)を
 | セキュリティグループ | 構築中 | [security-group.md](security-group.md) |
 | ALB | 構築中 | [alb.md](alb.md) |
 | Cognito | 構築中 | [cognito.md](cognito.md) |
-| データベース | 構築中 | [database.md](database.md) |
+| データベース | 完了 | [database.md](database.md) |
 
 状態の値は「設計中 / 設計レビュー待ち / 設計差し戻し中 / 構築中 / 実装レビュー待ち / 完了」(`templates/design-review-template.md`の運用に準じる)。
 
