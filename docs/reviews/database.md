@@ -103,3 +103,90 @@
 `docs/adr/003-rds-vs-aurora-selection.md`の内容を確認。RPO/RTOが未決定であることを正しく「根拠として弱い」と表現し、Aurora優位な技術的論点(リードレプリカの共有ストレージ有無)も自ら認めた上でコスト・現状トラフィックを理由に見送る、という構成になっており、単純な結論ありきの理由付けになっていない。メンター起点の表現・非公開の前提(目新しさ・市場シェア)にも触れておらず、公開ADRとして問題ない内容。
 
 残る`deletion_protection`・`backup_retention_period`の方針は、設計をやり直す必要のある項目ではないため、Terraform実装と並行して決定・追記してよい。この時点で**設計フェーズは完了とし、Terraform実装に進んで問題ない**。
+
+## 2026-08-17 実装レビュー
+
+## レビュー対象
+
+- 対象: `infra/database/`(`provider.tf` / `backend.tf` / `backend.hcl` / `remote_state.tf` / `rds.tf` / `secrets_manager.tf` / `terraform.tfvars`)、および参照元`infra/network-sg-alb/outputs.tf`の追加
+- 対応Step: tfstate6分割の「データベース」レイヤー
+- レビュー日: 2026-08-17
+
+## 総評
+
+`terraform plan`が14リソースの作成でエラーなく完了し、内容も設計(`database.md`)と一致しています。実装中に見つかったバグ(`subnet_ids`の二重リスト化、`db_subnet_group_name`の参照誤り、`engine_version`の無効な値、`locals.xxx`という誤った参照構文、`for_each`への`list`直接渡し)はいずれもその場で修正されました。特に良かったのは、単なるエラー解消で終わらせず、「この値は外部から変更する想定か」という観点から`variable`を`locals`に切り替えた点、マスターユーザーのパスワード管理を、当初案(`random_password`+手動Secrets Manager)から`manage_master_user_password`(AWS管理、stateに平文パスワードが一切乗らない)に切り替えた点です。いずれも単に動くようにする以上の、設計の質を上げる修正になっています。
+
+1点、コスト見積もりの更新漏れがあります。それ以外は実装レビューとして合格です。
+
+## 観点別レビュー
+
+### 設計
+
+- `database.md`で決めたスコープ(RDS本体+認証情報の保管まで、DBユーザー作成はCI/CD側)通りに実装されており、範囲の逸脱がない
+- `network-sg-alb`側への依存(`db`サブネット・`rds-sg`)を`terraform_remote_state`経由で正しく解決できている
+
+### セキュリティ
+
+- マスターユーザーは`manage_master_user_password = true`により、パスワードがTerraformのstateに一切乗らない形で実装できている。当初提示した案(`random_password`を使う方法)よりも安全な選択肢に自ら切り替えられた
+- アプリ用4ユーザーの認証情報生成・保存が`for_each`で過不足なくカバーされている
+- `random_password`の`override_special`を、DB接続文字列で問題を起こしやすい記号を除外する形に絞り込めており、実務的な配慮ができている
+
+### 可用性
+
+- `multi_az = true`など、設計通り。変更なし
+
+### 運用性
+
+- DBユーザー作成(GRANT)をCI/CD側に切り出す判断と、その経緯が`.claude/DESIGN_NOTES.md`に橋渡しメモとして記録されており、セッションをまたいでも追跡できる状態になっている
+
+### 保守性
+
+- ファイル分割(リソース種別ごと)・`for_each`の活用など、`network-sg-alb`レイヤーと一貫したスタイルで書けている
+- **改善余地**: `deletion_protection`・`backup_retention_period`の決定理由はコード側にコメントとして残っているが、`database.md`側への反映がまだ確認できていない(前回レビューの次のアクションのまま)
+
+### コスト
+
+- **抜け**: `manage_master_user_password = true`により、AWS側でマスターユーザー専用のSecrets Managerシークレットが自動的に1つ追加される。これは`plan`結果には明示的なリソースとして現れない(AWS内部で暗黙的に作成されるため)が、実際には課金対象。`database.md`のコスト見積もりはアプリ用4シークレットのみで計算されており、**マスター用の5シークレット目が反映されていない**
+
+### パフォーマンス
+
+- 変更なし
+
+### Terraform化した場合の改善点
+
+- 全体として大きな改善提案は無し。実装を進める中で見つかった誤りへの対応が、いずれも「なぜその書き方がより適切か」まで踏み込めており、単純なtypo修正のレベルを超えている
+
+### AWS Well-Architected Framework 6本柱
+
+- 運用上の優秀性: `plan`結果と設計ドキュメントの記述が一致。セッションをまたぐ持ち越し事項も記録済み
+- セキュリティ: `manage_master_user_password`の採用により、設計レビュー時点より安全な実装に到達
+- 信頼性: 変更なし
+- パフォーマンス効率: 変更なし
+- コスト最適化: 概ね妥当だが、マスターユーザー用シークレットの見積もり反映が未了
+- 持続可能性: 変更なし
+
+### 実務ならどう設計するか
+
+- `manage_master_user_password`のような、Terraformが暗黙的に作成する付随リソース(secret、レプリカ等)はコスト見積もりから漏れやすく、実務のレビューでも定番の見落としポイント。今回のように、実際に`plan`を通してから見積もりを見直す習慣は良い実践
+
+## 理解できていること
+
+- `terraform_remote_state`が「今の`.tf`ファイル」ではなく「最後に`apply`されたstate」を読む、という仕組み(実際にエラーを経験し、`network-sg-alb`側で`apply`することで解決した)
+- `variable`(外部からの入力)と`locals`(内部の固定値)の使い分けの意図
+- `for_each`が`map`/`set`を要求する理由と、`list`→`set`への変換が必要な場面
+- マスターユーザーとアプリ用ユーザーの役割の違い(ブートストラップ用 vs 実際にアプリが使う最小権限アカウント)
+
+## 曖昧なこと
+
+- マスターユーザー用のSecrets Managerシークレットのコストが、`database.md`の見積もりにまだ反映されていない
+
+## 理解できていないこと
+
+- 特になし
+
+## 次のアクション
+
+- [ ] `database.md`のコスト見積もりに、マスターユーザー用シークレット(5個目)分を追加する
+- [ ] `deletion_protection`・`backup_retention_period`の決定内容と理由を`database.md`のセキュリティ設計に反映する(前回からの持ち越し)
+- [ ] 実際に`terraform apply`して動作確認するかどうかを判断する。`apply`する場合は、確認後に必ず`terraform destroy`する(コストガードレール通り)
+- [ ] `apply`する場合、CI/CD側(新チャット2)でのDBユーザー作成タスクとの接続(Secrets Manager ARNの受け渡し方法など)を、CI/CD側の設計時に詰める
