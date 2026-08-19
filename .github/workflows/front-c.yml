@@ -1,0 +1,49 @@
+name: front-c
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/front-c/**"
+  push:
+    branches: [main]
+    paths:
+      - "apps/front-c/**"
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ECR_REPOSITORY: front-c
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: front-c
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/front-c-ecr-push
+          aws-region: ap-northeast-1
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Run tests
+        run: |
+          echo "TODO: アプリコード実装時にテストコマンドを設定する"
+
+      - name: Build image
+        run: |
+          docker build -t ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }} apps/front-c
+
+      - name: Push image
+        if: github.event_name == 'push'
+        run: |
+          docker push ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
