@@ -98,3 +98,91 @@
 - ライフサイクルポリシーの検討過程で、件数ベースの削除ルールが持つ「必要なイメージまで消えるリスク」を自分で発見し、さらに「現役稼働中のイメージがECRの経過日数だけで機械的に消される」という、Auto Scaling段階で初めて顕在化する類の見落としを本人からの質問で拾い上げ、`current`タグによる無期限保護という形で解決できたこと
 
 コンピュート層に依存する部分(DBユーザー作成タスク・ヘルスチェック連動タグ付け)は実装できないため方針レベルの記載に留まっていますが、これは適切な切り分けです。**設計フェーズは完了とし、Terraform実装(OIDC Identity Provider・IAM Role・ECRリポジトリ)に進んで問題ありません。**
+
+## 2026-08-19 実装レビュー
+
+## レビュー対象
+
+- 対象: `infra/network-sg-alb/oidc_provider.tf`・`outputs.tf`(追加分)、`infra/compute-b/`・`infra/compute-c/`(`backend.tf`・`provider.tf`・`remote_state.tf`・`iam.tf`・`ecr.tf`)、`.github/workflows/front-b.yml`・`api-b.yml`・`front-c.yml`・`api-c.yml`
+- 対応Step: `ci-cd.md`のコンピュート非依存部分(OIDC Identity Provider・IAM Role4個・ECRリポジトリ4個・ワークフロー雛形)
+- レビュー日: 2026-08-19
+
+## 総評
+
+`terraform apply`(`network-sg-alb`・`compute-b`・`compute-c`)が成功し、AWS CLIでの実物確認(IAM Roleの信頼ポリシー・ECRのタグイミュータビリティ/スキャン設定・インラインポリシー名)でも設計通りであることを確認できました。その後の`terraform destroy`も、時間課金のあるNAT Gateway/ALBだけでなく、無料のIAM Role/ECRリポジトリまで含めてきれいに削除されており、コストガードレールの徹底ができています。
+
+実装の過程で見つかった不具合(後述)はいずれも軽微〜中程度のもので、実装レビューとしては合格です。特に、GitHub Environmentsを使ったOIDCの`sub`条件のスコープ限定は、設計レビュー時点では気づけていなかった論点で、実装段階で正しく解決できています。
+
+## 実装中に見つかった不具合と対応
+
+以下はいずれも実装を進める過程で発見し、その場で修正しました。今後似た作業をする際の参考として記録しておきます。
+
+- **(私の提示ミス)** `thumbprint_list`のサンプル値が39文字(正しくは40文字)で`apply`エラーになった。ハードコードをやめ、`tls_certificate`データソースで動的取得する方式に変更。証明書のローテーションにも強くなり、結果的により良い実装になった
+- **(重大、apply前に発見)** `compute-b`・`compute-c`の`backend.tf`が、どちらも`database`レイヤーからのコピペで`key = "database/terraform.tfstate"`のままだった。`terraform init`前に発見できたため実害は無かったが、そのまま進んでいれば構築済みのRDSを巻き込む重大な事故になり得た
+- **(既存コードの潜在バグ)** `network-sg-alb/nat_gateway.tf`に、`aws_internet_gateway`への明示的な依存関係(`depends_on`)が無く、IGWアタッチ完了前にNAT Gatewayの作成が進んでしまい`apply`が失敗した。以前レビュー合格・マージ済みのコードに潜んでいた記載漏れで、今回のタイミングで偶然顕在化した
+- **(設計の見落とし、実装中に修正)** IAM Roleの信頼ポリシーの`sub`条件を、当初`repo:...:ref:refs/heads/main`としていたが、これは4ワークフロー全てで同一の値になり、Role分離(侵害時の被害限定)が実質機能しないことが判明。GitHub Environments(`front-b`等、Deployment branchesを`main`に制限)を導入し、`sub:environment:front-b`で分離する方式に変更した
+- **(コピペミス、軽微)** `compute-c/iam.tf`の`aws_iam_role_policy`名が`front-b-ecr-push-policy`/`api-b-ecr-push-policy`のままだった(AWS上のリソース衝突は起きないが、コンソール上で紛らわしい)。`front-c-ecr-push-policy`/`api-c-ecr-push-policy`に修正
+- **(コピペミス、軽微)** `front-c.yml`の`docker build`のビルドコンテキストが`apps/front-b`のままだった。`apps/front-c`に修正
+
+## 観点別レビュー
+
+### 設計
+
+- `ci-cd.md`で決めた内容(state配置・IAM Role4分離・ECR設定・PR/mainの2段階ビルド)が、実装に過不足なく反映されている
+
+### セキュリティ
+
+- IAM Roleの権限ポリシーが、対応する1つのECRリポジトリへのpushのみに限定されており、`ecr:GetAuthorizationToken`だけ`Resource = "*"`にする(AWS仕様上の制約)使い分けも正確
+- ワークフローYAML側の`permissions`が`id-token: write`・`contents: read`のみに絞られており、`GITHUB_TOKEN`のデフォルト権限に頼らず明示的に最小化できている
+- AWSアカウントIDをワークフローYAML(公開されるファイル)に直書きせず、GitHub Actions Secretsに切り出せている。`backend.hcl`・`.tfvars`をGit管理から外してきた一貫した方針を、CI/CD側にも保てている
+
+### 運用性
+
+- `nat_gateway.tf`の依存関係漏れを、実際の`apply`失敗を通じて発見・修正できた。これは既存レイヤーの品質向上にもつながっている
+
+### 保守性
+
+- front-b/api-b/front-c/api-cの4ファイルがほぼ同一構造で、コピペミス(ポリシー名・ビルドコンテキスト)が2件発生した。実害は無かったが、この種のミスは今後も起こり得る
+
+### コスト
+
+- 時間課金のあるリソース(NAT Gateway・ALB)は確認後に`destroy`し、無料のリソース(IAM Role・ECRリポジトリ)も含めてクリーンな状態に戻せている
+
+### Terraform化した場合の改善点
+
+- `compute-b`・`compute-c`それぞれの`iam.tf`・`ecr.tf`は、サービス名(front/api)以外はほぼ同一の構造を4回繰り返している。`for_each`でサービス名のリスト(またはmap)を回す形にリファクタリングすると、今回発生したようなコピペミスの発生源そのものを減らせる。今回は「初めてのOIDC/IAM構文に慣れる」目的もあり、あえて1つずつ書き下す形で進めたので、今の実装のままでも問題はない(理解を優先した進め方として妥当)。ただ、次に同じパターン(4分割・ほぼ同一構造)が出てきたときは、`for_each`化を検討する価値がある
+
+### AWS Well-Architected Framework 6本柱
+
+- 運用上の優秀性: 実装中に既存コードの依存関係漏れを発見・修正できた
+- セキュリティ: OIDCの`sub`条件をGitHub Environmentsで正しくスコープできており、IAM Role分離が実効的に機能する状態になっている
+- 信頼性: 直接の対象外(設計レビュー側で議論済み)
+- パフォーマンス効率: 直接の対象外
+- コスト最適化: 課金リソースの確認後destroyを徹底できている
+- 持続可能性: 特筆事項なし
+
+### 実務ならどう設計するか
+
+- 実務では、Terraformの`fmt`/`validate`やコピペミスを拾うLintを、`terraform.tf`変更時のPRで自動チェックする仕組み(今回の`compute-c`のポリシー名ミスのような単純な人為ミス)を入れることが多い。今回のCI/CD自体が「そのための土台」でもあるので、次のフェーズでこの種のセルフチェックを組み込む余地がある
+
+## 理解できていること
+
+- OIDC Identity Provider(信頼の登録)→ IAM Role(誰に何を許可するか)→ 実行時のAssumeRoleWithWebIdentity(実際に借りる)という3段階の役割分担
+- `Principal.Federated`が「プロバイダー自身」ではなく「そのプロバイダー経由で認証された相手」を指すこと
+- GitHub Environmentsの`sub:environment:X`条件と、Deployment branchesの制限が組み合わさることで、IAM側・GitHub側の二重の防御になっていること
+- `permissions`ブロックが明示した項目以外を全て無効化する、ホワイトリスト方式であること
+- ECRのログインがリポジトリ単位ではなくレジストリ単位であり、実際の絞り込みはIAM側の権限ポリシーが担っていること
+- イミュータブルタグ運用における、コミットSHAを使う理由(同一タグへの再pushが拒否されるため)
+
+## 曖昧なこと
+
+- 特になし。会話の中で生じた疑問(信頼ポリシーの解釈、`sub`条件のスコープ、ECRログインの範囲など)は、いずれも咀嚼した上で正しい結論に至っている
+
+## 理解できていないこと
+
+- 特になし
+
+## 次のアクション
+
+- [ ] (任意・低優先度)`compute-b`・`compute-c`の`iam.tf`・`ecr.tf`を、次に同種のパターンが出てきたタイミングで`for_each`化を検討する
+- [ ] `docs/architecture/README.md`のCI/CD行の状態は、コンピュート層依存の3項目(DBユーザー作成タスク・ライフサイクルポリシー・ヘルスチェック連動タグ付け)が未実装のため、`network-sg-alb-cognito`と同じ考え方で意図的に「構築中」のまま維持する(「完了」への変更は、コンピュート層構築時にこれらを実装してから)
