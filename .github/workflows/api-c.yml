@@ -18,32 +18,30 @@ env:
   ECR_REPOSITORY: api-c
 
 jobs:
-  build:
+  build-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image (no push)
+        run: |
+          docker build -t ${{ env.ECR_REPOSITORY }}:${{ github.sha }} apps/api-c
+
+  push:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: api-c
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/api-c-ecr-push
           aws-region: ap-northeast-1
-
       - name: Login to Amazon ECR
         id: ecr-login
         uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Run tests
-        run: |
-          echo "TODO: アプリコード実装時にテストコマンドを設定する"
-
-      - name: Build image
+      - name: Build and push image
         run: |
           docker build -t ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }} apps/api-c
-
-      - name: Push image
-        if: github.event_name == 'push'
-        run: |
           docker push ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}

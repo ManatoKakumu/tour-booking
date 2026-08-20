@@ -186,3 +186,28 @@
 
 - [ ] (任意・低優先度)`compute-b`・`compute-c`の`iam.tf`・`ecr.tf`を、次に同種のパターンが出てきたタイミングで`for_each`化を検討する
 - [ ] `docs/architecture/README.md`のCI/CD行の状態は、コンピュート層依存の3項目(DBユーザー作成タスク・ライフサイクルポリシー・ヘルスチェック連動タグ付け)が未実装のため、`network-sg-alb-cognito`と同じ考え方で意図的に「構築中」のまま維持する(「完了」への変更は、コンピュート層構築時にこれらを実装してから)
+
+## 2026-08-20 PR実行で発覚したバグの修正
+
+### 経緯
+
+コンピュート層セッションで`apps/`配下に実際のアプリコードを追加し、初めて4本のワークフローを実PR(#9)で動かしたところ、4本とも次のエラーで即座に失敗した。
+
+```
+Branch "refs/pull/9/merge" is not allowed to deploy to api-b due to environment protection rules.
+```
+
+原因は、`jobs.build.environment: <service名>`がジョブ全体に無条件でかかっていたこと。2026-08-19実装レビュー時点で「PR時はビルド確認のみ・mainマージ時のみpush」という意図(次のアクション参照)はステップレベルの`if: github.event_name == 'push'`で表現されていたが、ジョブレベルの`environment`(Deployment branchesを`main`に制限)がPRの実行(ブランチ名`refs/pull/<PR番号>/merge`)そのものをブロックしてしまい、ビルド確認のステップにすら到達できていなかった。これは2026-08-19の実装レビューでは発見できなかった不具合で、実際にPRでワークフローを動かして初めて顕在化した。
+
+### 修正内容
+
+4本のワークフロー(`front-b.yml`・`front-c.yml`・`api-b.yml`・`api-c.yml`)を、それぞれ1ジョブから2ジョブに分割した。
+
+- `build-check`(`if: github.event_name == 'pull_request'`): `environment`無し。AWS認証・ECRログインを行わず、`docker build`のみでビルド可否を確認する
+- `push`(`if: github.event_name == 'push'`): 従来通り`environment: <service名>`を維持。AWS認証→ECRログイン→push
+
+`environment`(=OIDCの`sub:environment:X`条件によるIAM Role分離)が必要なのは実際にAWSへ認証する`push`ジョブのみであり、`build-check`ジョブはAWSに一切触れないため、この分割によってセキュリティ上の後退はない。
+
+### 判定
+
+2026-08-19時点の設計・実装レビューの合格判定を覆すものではない(OIDC/IAM Role設計自体は無傷)。トリガー条件の「意図」と「実装」の整合性を取り直す修正であり、再レビューは不要と判断する。この修正を反映した状態で、引き続き実装完了扱いとする。
