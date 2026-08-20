@@ -37,6 +37,19 @@ resource "aws_vpc_endpoint" "logs" {
   }
 }
 
+resource "aws_vpc_endpoint" "secretsmanager" {
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.ap-northeast-1.secretsmanager"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = [for s in aws_subnet.ecs_api : s.id]
+  security_group_ids  = [aws_security_group.vpc_endpoint.id]
+  private_dns_enabled = true
+
+  tags = {
+    Name = "vpce-secretsmanager"
+  }
+}
+
 resource "aws_vpc_endpoint" "s3" {
   vpc_id            = aws_vpc.main.id
   service_name      = "com.amazonaws.ap-northeast-1.s3"
