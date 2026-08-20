@@ -186,3 +186,22 @@
 - [ ] `docs/architecture/README.md`のサービス一覧の状態を「実装レビュー待ち」から更新する(この範囲は保留事項を除き実装完了、レビューも合格のため)
 - [ ] リージョン文字列のハードコード解消は任意。対応する場合は`variable "region"`等を1箇所に定義する
 - [ ] `terraform apply`での動作確認後、確認が終わり次第`terraform destroy`する(既存のガードレール通り)
+
+## 2026-08-20 コンピュート層検討に伴う設計修正
+
+### 経緯
+
+`database.md`側と同じ経緯(詳細は`docs/reviews/database.md`の同日付記載を参照)。フロントのDBアクセスを廃止したことに伴い、`security-group.md`のSG要件・前提のうち、ECS(フロント)→RDSを許可していた記述が不要になった。
+
+### 修正内容
+
+- `security-group.md`: 要件・前提から「ECS(フロント)」のOutbound「RDS」を削除。「RDS」のInboundを「ECS(フロント・API)」→「ECS(API)」に変更
+- `infra/network-sg-alb/security_group.tf`: `aws_vpc_security_group_egress_rule.ecs_front_to_rds`・`aws_vpc_security_group_ingress_rule.rds_from_ecs_front`を削除。`ecs_front`・`rds`のSG `description`を実態に合わせて修正
+
+### 補足
+
+この変更はSGルールを1組削除するのみで、他のSGルール(ALB↔front/api、front/api↔ElastiCache・VPCエンドポイント、api↔RDS等)には影響しない。2026-08-14設計レビュー・2026-08-15実装レビューで合格とした判断のうち、この1点のみが対象範囲外だった論点(フロントのDBアクセス方式)に起因する修正であり、再レビューは不要と判断する。
+
+### 判定
+
+上記2点を反映した状態で、引き続き実装完了・合格判定を維持する。

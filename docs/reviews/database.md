@@ -198,3 +198,19 @@
 確認後`terraform destroy`を実行。`skip_final_snapshot`未設定によるエラー、および一度目のdestroyで削除したSecrets Managerシークレットが30日の復旧猶予(`recovery_window_in_days`のデフォルト)で残り再作成に失敗する問題が発生したが、いずれも原因を特定し解消(`skip_final_snapshot = true`の追加、`recovery_window_in_days = 0`の追加、および残存シークレットの`--force-delete-without-recovery`)。最終的にRDSインスタンス・Secrets Manager・NAT Gateway・ALB・非デフォルトVPCいずれも0件であることをAWS CLIで確認済み。
 
 **データベースレイヤーはこれで完了とし、mainへのマージに進んで問題ありません。**
+
+## 2026-08-20 コンピュート層検討に伴う設計修正
+
+### 経緯
+
+コンピュート層(`compute.md`)の要件・前提を検討する過程で、「フロントコンテナがDBに直接アクセスするか」という、`database.md`設計時点では明示的に検討されていなかった論点が浮上した。B/C分離の要である行単位のデータ隔離(GRANTでは実現できず、アプリケーション側のWHERE句に依存)を守る主体を1箇所(API)に集約すること、また各サービスが独立してデプロイされる構成(front/API間に共通コードが無い)でDBアクセスロジックを二重に持たせるべきではないことから、**フロントのDBアクセスを廃止し、APIのみがDBにアクセスする**方針に変更した。
+
+### 修正内容
+
+- `database.md`: 要件・前提/通信経路/セキュリティ設計から「ECS(フロント)」のDBアクセスに関する記述を削除。DBユーザーを4種類(front-b/front-c/api-b/api-c)→2種類(api-b/api-c)に変更。Secrets Managerのコスト見積もりを再計算($44.07/月 → $43.27/月)
+- `infra/database/secrets_manager.tf`: `local.db_users`を`["b_front", "b_api", "c_front", "c_api"]`→`["b_api", "c_api"]`に修正
+- 関連するSG側の修正(`security-group.md`・`infra/network-sg-alb/security_group.tf`)は`docs/reviews/network-sg-alb-cognito.md`側に同日付で記録
+
+### 判定
+
+2026-08-17時点の設計・実装レビューの合格判定を覆すものではない(RDS本体・暗号化・可用性設計などのコア判断は変更なし)。DBユーザー数・アクセス元というスコープの狭い修正であり、再レビューは不要と判断する。この修正を反映した状態で、引き続き完了扱いとする。
