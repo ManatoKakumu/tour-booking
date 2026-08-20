@@ -1,5 +1,5 @@
 locals {
-  db_users = toset(["b_front", "b_api", "c_front", "c_api"])
+  db_users = toset(["b_api", "c_api"])
 }
 
 resource "random_password" "app" {

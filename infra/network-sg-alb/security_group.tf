@@ -10,7 +10,7 @@ resource "aws_security_group" "alb" {
 
 resource "aws_security_group" "ecs_front" {
   name        = "ecs-front-sg"
-  description = "Allows inbound from ALB, outbound to ElastiCache, RDS, and VPC endpoints"
+  description = "Allows inbound from ALB, outbound to ElastiCache, and VPC endpoints"
   vpc_id      = aws_vpc.main.id
 
   tags = {
@@ -40,7 +40,7 @@ resource "aws_security_group" "elasticache" {
 
 resource "aws_security_group" "rds" {
   name        = "rds-sg"
-  description = "Allows inbound from ECS front/API, outbound for replication sync"
+  description = "Allows inbound from ECS API, outbound for replication sync"
   vpc_id      = aws_vpc.main.id
 
   tags = {
@@ -98,16 +98,6 @@ resource "aws_vpc_security_group_egress_rule" "ecs_front_to_elasticache" {
   to_port                      = 6379
   ip_protocol                  = "tcp"
   description                  = "To ElastiCache"
-}
-
-# ECS front → RDS (ECS front側のOutbound)
-resource "aws_vpc_security_group_egress_rule" "ecs_front_to_rds" {
-  security_group_id            = aws_security_group.ecs_front.id
-  referenced_security_group_id = aws_security_group.rds.id
-  from_port                    = 3306
-  to_port                      = 3306
-  ip_protocol                  = "tcp"
-  description                  = "To RDS"
 }
 
 # ECS front → VPCエンドポイント (ECS front側のOutbound)
@@ -214,16 +204,6 @@ resource "aws_vpc_security_group_egress_rule" "elasticache_sync_outbound" {
   to_port                      = 6379
   ip_protocol                  = "tcp"
   description                  = "ElastiCache sync(outbound)"
-}
-
-# RDS ← ECS front（RDS側のInbound）
-resource "aws_vpc_security_group_ingress_rule" "rds_from_ecs_front" {
-  security_group_id            = aws_security_group.rds.id
-  referenced_security_group_id = aws_security_group.ecs_front.id
-  from_port                    = 3306
-  to_port                      = 3306
-  ip_protocol                  = "tcp"
-  description                  = "From ECS front"
 }
 
 # RDS ← ECS api（RDS側のInbound）
