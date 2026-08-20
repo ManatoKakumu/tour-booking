@@ -211,3 +211,32 @@ Branch "refs/pull/9/merge" is not allowed to deploy to api-b due to environment 
 ### 判定
 
 2026-08-19時点の設計・実装レビューの合格判定を覆すものではない(OIDC/IAM Role設計自体は無傷)。トリガー条件の「意図」と「実装」の整合性を取り直す修正であり、再レビューは不要と判断する。この修正を反映した状態で、引き続き実装完了扱いとする。
+
+## 2026-08-20 OIDCトークンの`sub`クレーム形式変更への追従
+
+### 経緯
+
+上記の修正後、mainマージでpushジョブが実際に走るようになったが、`Could not assume role with OIDC: Not authorized to perform sts:AssumeRoleWithWebIdentity`で失敗。`ACTIONS_ID_TOKEN_REQUEST_URL`から実トークンを取得し中身を確認したところ、`sub`クレームが以下のようになっていた。
+
+```
+repo:ManatoKakumu@145267617/tour-booking@1312824695:environment:front-b
+```
+
+2026-08-19時点でIAM Roleの信頼ポリシーに設定した値は`repo:ManatoKakumu/tour-booking:environment:front-b`(ユーザーID・リポジトリIDを含まない形式)で、これは当時の実機確認(apply→AWS CLIでの確認)でも問題なく機能していた。今回、GitHub側がOIDCトークンの`sub`クレームに、リポジトリ名・ユーザー名変更時の追跡制を高めるためユーザーID(`@145267617`)・リポジトリID(`@1312824695`)を埋め込む形式に変更したため、リテラル一致を前提にしていた信頼ポリシーが機能しなくなっていた。
+
+### 修正内容
+
+`infra/compute-b/iam.tf`・`infra/compute-c/iam.tf`の4ロールすべての`StringLike`条件を、IDの部分をワイルドカードで受け止める形に変更した。
+
+```hcl
+# 変更前
+"token.actions.githubusercontent.com:sub" = "repo:ManatoKakumu/tour-booking:environment:front-b"
+# 変更後
+"token.actions.githubusercontent.com:sub" = "repo:ManatoKakumu@*/tour-booking@*:environment:front-b"
+```
+
+`apply`後、GitHub Actions上で4サービス全てのECR pushが成功することをAWS CLI(`aws ecr describe-images`)で実機確認済み。
+
+### 判定
+
+これはこのプロジェクトの設計・実装の誤りではなく、**GitHub側のOIDCトークン仕様変更に伴う外部要因の追従**。IAM Role分離やDBユーザー分離との一貫性(侵害時の被害限定という設計原則)には影響しない。再レビュー不要、実装完了扱いを継続する。今後もGitHub側の仕様変更でこの種の追従が必要になり得ることは、運用上の留意点として認識しておく。
