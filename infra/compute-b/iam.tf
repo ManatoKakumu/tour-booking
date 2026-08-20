@@ -13,7 +13,7 @@ resource "aws_iam_role" "front_b_ecr_push" {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
           StringLike = {
-            "token.actions.githubusercontent.com:sub" = "repo:ManatoKakumu/tour-booking:environment:front-b"
+            "token.actions.githubusercontent.com:sub" = "repo:ManatoKakumu@*/tour-booking@*:environment:front-b"
           }
         }
       }
@@ -63,7 +63,7 @@ resource "aws_iam_role" "api_b_ecr_push" {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
           StringLike = {
-            "token.actions.githubusercontent.com:sub" = "repo:ManatoKakumu/tour-booking:environment:api-b"
+            "token.actions.githubusercontent.com:sub" = "repo:ManatoKakumu@*/tour-booking@*:environment:api-b"
           }
         }
       }
