@@ -20,14 +20,15 @@
   - 以上より、ALBは「論理的に」1つとする
 
 ### 通信経路
-- /b/*
+- /b/(front or api)/*
   - B側であり、B側のECS(フロント・API)へリクエストを送信する
   - 認証必須
-- /c/mypage/*, /c/booking/*
+- /c/mypage/(front or api)/*, /c/booking/(front or api)/*
   - C側の認証が必要な場合のリクエストURLであり、C側のECS(フロント・API)へリクエストを送信する
   - 認証必須
 - 上記以外
   - C側のECS(フロント・API)へリクエストを送信する
+  - 上記のURLと同様、 `front` か `api` かで区別する
   - 認証不要
 
 ### セキュリティ設計
