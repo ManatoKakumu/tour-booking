@@ -4,7 +4,7 @@
 - CloudFront VPC origin経由のため、ALBはインターネットからの直接通信を受け付けない
 - リクエストURLのパスによって、フロント・APIへ通信先を分離させる
 - B側はすべて認証必須、C側は一部認証必須で残りは認証不要。認証にはCognitoを用いる
-- Cognito認証の際に、認可コードをトークンに変換する処理ではHTTPSが必要なため、ALBと同じ東京リージョンにてACMを用いてSSL証明書をインポートする必要がある
+- Cognito認証の際に、認可コードをトークンに変換する処理ではHTTPSが必要なため、ALBと同じ東京リージョンにてACMを用いてSSL証明書をインポートする必要がある。ただし、現段階では、HTTPとして進め、後にHTTPSに置き換える
 
 ## 設計
 
@@ -20,15 +20,15 @@
   - 以上より、ALBは「論理的に」1つとする
 
 ### 通信経路
-- /b/(front or api)/*
+- /b/api/* or /b/*
   - B側であり、B側のECS(フロント・API)へリクエストを送信する
   - 認証必須
-- /c/mypage/(front or api)/*, /c/booking/(front or api)/*
+- /c/mypage/api/* or /c/mypage/*, /c/booking/api/* or /c/booking/*
   - C側の認証が必要な場合のリクエストURLであり、C側のECS(フロント・API)へリクエストを送信する
   - 認証必須
 - 上記以外
   - C側のECS(フロント・API)へリクエストを送信する
-  - 上記のURLと同様、 `front` か `api` かで区別する
+  - 上記のURLと同様、 `api` が記載されているかで区別する
   - 認証不要
 
 ### セキュリティ設計
