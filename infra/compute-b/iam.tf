@@ -30,7 +30,11 @@ resource "aws_iam_role_policy" "front_b_ecr_push" {
     Statement = [
       {
         Effect   = "Allow"
-        Action   = "ecr:GetAuthorizationToken"
+        Action   = [
+          "ecr:GetAuthorizationToken",
+          "ecs:DescribeTaskDefinition",
+          "ecs:RegisterTaskDefinition"
+        ]
         Resource = "*"
       },
       {
@@ -43,6 +47,19 @@ resource "aws_iam_role_policy" "front_b_ecr_push" {
           "ecr:CompleteLayerUpload"
         ]
         Resource = aws_ecr_repository.front_b.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ecs:DescribeServices",
+          "ecs:UpdateService"
+        ]
+        Resource = aws_ecs_service.this["front-b"].id
+      },
+      {
+        Effect   = "Allow"
+        Action   = "iam:PassRole"
+        Resource = aws_iam_role.ecs_execution_front_b.arn
       }
     ]
   })
@@ -80,7 +97,11 @@ resource "aws_iam_role_policy" "api_b_ecr_push" {
     Statement = [
       {
         Effect   = "Allow"
-        Action   = "ecr:GetAuthorizationToken"
+        Action   = [
+          "ecr:GetAuthorizationToken",
+          "ecs:DescribeTaskDefinition",
+          "ecs:RegisterTaskDefinition"
+        ]
         Resource = "*"
       },
       {
@@ -93,6 +114,19 @@ resource "aws_iam_role_policy" "api_b_ecr_push" {
           "ecr:CompleteLayerUpload"
         ]
         Resource = aws_ecr_repository.api_b.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ecs:DescribeServices",
+          "ecs:UpdateService"
+        ]
+        Resource = aws_ecs_service.this["api-b"].id
+      },
+      {
+        Effect   = "Allow"
+        Action   = "iam:PassRole"
+        Resource = aws_iam_role.ecs_execution_api_b.arn
       }
     ]
   })
