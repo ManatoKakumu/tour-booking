@@ -85,3 +85,49 @@ resource "aws_ecs_service" "this" {
     container_port   = 3000
   }
 }
+
+resource "aws_ecs_task_definition" "db_user_setup_b" {
+  family                   = "db-user-setup-b"
+  requires_compatibilities = ["FARGATE"]
+  network_mode              = "awsvpc"
+  cpu                       = "256"
+  memory                    = "512"
+  execution_role_arn        = aws_iam_role.db_user_setup_b.arn
+
+  container_definitions = jsonencode([
+    {
+      name    = "db-user-setup-b"
+      image   = "${aws_ecr_repository.api_b.repository_url}:${var.api_b_image_tag}"
+      command = ["python", "create_db_user.py"]
+
+      environment = [
+        { name = "DB_HOST", value = data.terraform_remote_state.database.outputs.db_endpoint },
+        { name = "APP_DB_USERNAME", value = "b_api" }
+      ]
+
+      secrets = [
+        {
+          name      = "DB_MASTER_USERNAME"
+          valueFrom = "${data.terraform_remote_state.database.outputs.master_user_secret_arn}:username::"
+        },
+        {
+          name      = "DB_MASTER_PASSWORD"
+          valueFrom = "${data.terraform_remote_state.database.outputs.master_user_secret_arn}:password::"
+        },
+        {
+          name      = "APP_DB_PASSWORD"
+          valueFrom = data.terraform_remote_state.database.outputs.app_secret_arns["b_api"]
+        }
+      ]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = aws_cloudwatch_log_group.api_b.name
+          "awslogs-region"        = "ap-northeast-1"
+          "awslogs-stream-prefix" = "db-user-setup-b"
+        }
+      }
+    }
+  ])
+}

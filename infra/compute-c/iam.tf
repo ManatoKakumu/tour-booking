@@ -232,3 +232,60 @@ resource "aws_iam_role_policy" "ecs_execution_api_c" {
     ]
   })
 }
+
+resource "aws_iam_role" "db_user_setup_c" {
+  name = "db-user-setup-c-execution"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = { Service = "ecs-tasks.amazonaws.com" }
+        Action    = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "db_user_setup_c" {
+  name = "db-user-setup-c-execution-policy"
+  role = aws_iam_role.db_user_setup_c.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "ecr:GetAuthorizationToken"
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:BatchGetImage",
+          "ecr:GetDownloadUrlForLayer"
+        ]
+        Resource = aws_ecr_repository.api_c.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = aws_cloudwatch_log_group.api_c.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = [
+          data.terraform_remote_state.database.outputs.master_user_secret_arn,
+          data.terraform_remote_state.database.outputs.app_secret_arns["c_api"]
+        ]
+      }
+    ]
+  })
+}
