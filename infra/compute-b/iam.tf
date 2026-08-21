@@ -127,6 +127,16 @@ resource "aws_iam_role_policy" "api_b_ecr_push" {
         Effect   = "Allow"
         Action   = "iam:PassRole"
         Resource = aws_iam_role.ecs_execution_api_b.arn
+      },
+      {
+        Effect   = "Allow"
+        Action   = "ecs:RunTask"
+        Resource = aws_ecs_task_definition.db_user_setup_b.arn
+      },
+      {
+        Effect   = "Allow"
+        Action   = "iam:PassRole"
+        Resource = aws_iam_role.db_user_setup_b.arn
       }
     ]
   })
