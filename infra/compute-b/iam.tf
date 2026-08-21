@@ -97,3 +97,104 @@ resource "aws_iam_role_policy" "api_b_ecr_push" {
     ]
   })
 }
+
+resource "aws_iam_role" "ecs_execution_front_b" {
+  name = "ecs-execution-front-b"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = { Service = "ecs-tasks.amazonaws.com" }
+        Action    = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "ecs_execution_front_b" {
+  name = "ecs-execution-front-b-policy"
+  role = aws_iam_role.ecs_execution_front_b.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "ecr:GetAuthorizationToken"
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:BatchGetImage",
+          "ecr:GetDownloadUrlForLayer"
+        ]
+        Resource = aws_ecr_repository.front_b.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = aws_cloudwatch_log_group.front_b.arn
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role" "ecs_execution_api_b" {
+  name = "ecs-execution-api-b"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = { Service = "ecs-tasks.amazonaws.com" }
+        Action    = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "ecs_execution_api_b" {
+  name = "ecs-execution-api-b-policy"
+  role = aws_iam_role.ecs_execution_api_b.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "ecr:GetAuthorizationToken"
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:BatchGetImage",
+          "ecr:GetDownloadUrlForLayer"
+        ]
+        Resource = aws_ecr_repository.api_b.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = aws_cloudwatch_log_group.api_b.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = data.terraform_remote_state.database.outputs.app_secret_arns["b_api"]
+      }
+    ]
+  })
+}
