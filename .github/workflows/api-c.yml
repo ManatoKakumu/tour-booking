@@ -9,6 +9,7 @@ on:
     branches: [main]
     paths:
       - "apps/api-c/**"
+  workflow_dispatch:
 
 permissions:
   id-token: write
@@ -68,3 +69,41 @@ jobs:
           service: api-c
           cluster: tour-booking-c
           wait-for-service-stability: true
+
+  create-db-user:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: api-c
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/api-c-ecr-push
+          aws-region: ap-northeast-1
+
+      - name: Run DB user setup task
+        run: |
+          NETWORK_CONFIG=$(aws ecs describe-services \
+            --cluster tour-booking-c \
+            --services api-c \
+            --query 'services[0].networkConfiguration' \
+            --output json)
+
+          TASK_ARN=$(aws ecs run-task \
+            --cluster tour-booking-c \
+            --task-definition db-user-setup-c \
+            --launch-type FARGATE \
+            --network-configuration "$NETWORK_CONFIG" \
+            --query 'tasks[0].taskArn' --output text)
+
+          aws ecs wait tasks-stopped --cluster tour-booking-c --tasks "$TASK_ARN"
+
+          EXIT_CODE=$(aws ecs describe-tasks \
+            --cluster tour-booking-c \
+            --tasks "$TASK_ARN" \
+            --query 'tasks[0].containers[0].exitCode' --output text)
+
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "DB user setup task failed with exit code $EXIT_CODE"
+            exit 1
+          fi
