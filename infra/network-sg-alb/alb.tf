@@ -58,7 +58,7 @@ resource "aws_lb_target_group" "api_b" {
   target_type = "ip"
 
   health_check {
-    path                = "/"
+    path                = "/health/"
     healthy_threshold   = 3
     unhealthy_threshold = 3
     interval            = 30
@@ -78,7 +78,7 @@ resource "aws_lb_target_group" "api_c" {
   target_type = "ip"
 
   health_check {
-    path                = "/"
+    path                = "/health/"
     healthy_threshold   = 3
     unhealthy_threshold = 3
     interval            = 30
