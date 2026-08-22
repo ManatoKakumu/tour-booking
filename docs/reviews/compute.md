@@ -186,6 +186,40 @@ GitHub Actions側でも、実際にPRを走らせたことで初めて顕在化�
 
 ## 次のアクション
 
-- [ ] SSMポートフォワード経由で、ALB→ECS(front-b/front-c/api-b/api-c)への疎通を実際に確認する
-- [ ] 確認後、`docs/architecture/README.md`の「コンピュート」の状態を更新する
+- [x] SSMポートフォワード経由で、ALB→ECS(front-b/front-c/api-b/api-c)への疎通を実際に確認する
+- [ ] `docs/architecture/README.md`の「コンピュート」の状態を更新する
 - [ ] (任意)`overall.drawio.png`に、今回実装した内容(ALBリスナー、GitHub Actions→ECSデプロイの矢印)を反映するか検討する
+
+## 2026-08-22 動作確認(SSMトンネル)で発見・修正した不具合
+
+実装レビュー(2026-08-21)の合格後、SSMポートフォワード経由で実際にALB→ECSの疎通を確認する過程で、レビュー時点では机上のチェック(`terraform validate`)だけでは発見できなかった不具合が複数見つかった。いずれもその場で修正し、最終的に想定通りの疎通(front-c/api-cの応答確認、front-bでのCognito認証リダイレクト確認)まで到達している。
+
+### 発見・修正した不具合
+
+1. **front-b/front-cがECRからイメージをpullできない(`CannotPullContainerError`、S3向けIPへの`i/o timeout`)**
+   - 原因: `network.md`(2026-08-10)の設計意図(「Gateway型を1つ、VPC全体でルートテーブルに関連付け」)と、実際の`infra/network-sg-alb/vpc_endpoint.tf`(`rtb-api`にしか関連付けていなかった)がズレていた。ECRのイメージレイヤーはS3に保存されており、フロント/API問わずコンテナ起動に必須の経路だが、この点が見落とされていた
+   - 修正: `route_table.tf`にfront専用の`rtb-front`を新設(ALB・DBとはルートテーブル要件が異なるため分離)、`vpc_endpoint.tf`の`aws_vpc_endpoint.s3`の`route_table_ids`に追加。あわせて`security_group.tf`の`ecs_front`に、S3のprefix list宛のOutboundルールを追加(Gateway型エンドポイントはSGを持たないため、ルートテーブルとSGのprefix list指定の両方が必要)
+   - `network.md`・`security-group.md`にも修正内容を反映済み
+
+2. **ECS Execution Roleが`logs:CreateLogStream`を拒否される(`AccessDeniedException`)**
+   - 原因: IAMポリシーの`Resource`に指定していたのがロググループのARN(`.../log-group:/ecs/api-b`)のみで、`logs:CreateLogStream`が実際に操作するログストリーム単位のARNまで許可が及んでいなかった(末尾`:*`が必要)
+   - 修正: `compute-b`/`compute-c`の`iam.tf`、Execution Role 3種(front用・api用・RunTask用)×2レイヤー、計6箇所の`Resource`を`"${aws_cloudwatch_log_group.xxx.arn}:*"`に修正
+
+3. **`aws_iam_role_policy`(RunTask起動用の`ecs:RunTask`・`iam:PassRole`)を誤って信頼ポリシー(`assume_role_policy`)側に追加してしまっていた**
+   - `Principal`を欠いた文が信頼ポリシーに混入する形になっており、`apply`時にAWS側でエラーになる可能性が高い状態だった。実装レビューのタイミングでは気づけず、後続の作業で発見・修正
+
+4. **ALBターゲットグループのヘルスチェックパスが実際のアプリのURLと不一致(2回発生)**
+   - 1回目: `/`に設定していたが、Django側の実際のエンドポイントは`/health/`だった
+   - 2回目: DjangoのURL構造を`/api/health/`・`/b/api/health/`に変更した際、ヘルスチェックパスの更新を追従し忘れた
+   - いずれも`terraform validate`では検出できず、実際のターゲットグループのヘルスチェック結果(`Target.ResponseCodeMismatch`)で発覚
+
+5. **ALBが`/api/*`等のパスをそのままバックエンドに転送するのに対し、Djangoのルーティングがその接頭辞を認識していなかった(404)**
+   - 対応: `config/urls.py`の`include`の接頭辞を、ALBが実際に転送するパス(`/api/`・`/b/api/`)に合わせて変更
+
+### 総括
+
+いずれも「設計ドキュメントに書いた意図」と「実際のコード」がズレていたケース(1・4・5)と、`terraform validate`が構文チェックに留まりAWS側の実際の権限判定までは検証できないケース(2・3)に大別できる。後者は、`terraform apply`して実際に動かしてみるまで発見できない性質の不具合であり、机上のレビューだけでなく実機確認まで一貫して行うことの価値を裏付けている。詳細な経緯は`.claude/DESIGN_NOTES.md`(1のみ、非公開)にも記録済み。
+
+### 判定
+
+いずれも実装レビュー(2026-08-21)の合格判定を覆すものではない(設計そのものの誤りではなく、実装時の細部のズレ)。すべて修正済み・実機確認済みのため、再レビューは不要と判断する。
