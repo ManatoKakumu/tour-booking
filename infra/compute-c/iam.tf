@@ -183,7 +183,7 @@ resource "aws_iam_role_policy" "ecs_execution_front_c" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = aws_cloudwatch_log_group.front_c.arn
+        Resource = "${aws_cloudwatch_log_group.front_c.arn}:*"
       }
     ]
   })
@@ -230,7 +230,7 @@ resource "aws_iam_role_policy" "ecs_execution_api_c" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = aws_cloudwatch_log_group.api_c.arn
+        Resource = "${aws_cloudwatch_log_group.api_c.arn}:*"
       },
       {
         Effect = "Allow"
@@ -284,7 +284,7 @@ resource "aws_iam_role_policy" "db_user_setup_c" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = aws_cloudwatch_log_group.api_c.arn
+        Resource = "${aws_cloudwatch_log_group.api_c.arn}:*"
       },
       {
         Effect = "Allow"
