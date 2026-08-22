@@ -1,9 +1,17 @@
-# 共有ルートテーブル(ALB・フロント・DB用、localのみ)
+# 共有ルートテーブル(ALB・DB用、localのみ)
 resource "aws_route_table" "shared" {
   vpc_id = aws_vpc.main.id
 
   tags = {
     Name = "rtb-shared"
+  }
+}
+
+resource "aws_route_table" "front" {
+  vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name = "rtb-front"
   }
 }
 
@@ -30,7 +38,7 @@ resource "aws_route_table_association" "alb" {
 resource "aws_route_table_association" "front" {
   for_each       = aws_subnet.ecs_front
   subnet_id      = each.value.id
-  route_table_id = aws_route_table.shared.id
+  route_table_id = aws_route_table.front.id
 }
 
 resource "aws_route_table_association" "db" {
