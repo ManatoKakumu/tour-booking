@@ -187,7 +187,7 @@ GitHub Actions側でも、実際にPRを走らせたことで初めて顕在化�
 ## 次のアクション
 
 - [x] SSMポートフォワード経由で、ALB→ECS(front-b/front-c/api-b/api-c)への疎通を実際に確認する
-- [ ] `docs/architecture/README.md`の「コンピュート」の状態を更新する
+- [x] `docs/architecture/README.md`の「コンピュート」の状態を更新する(2026-08-22、完了に更新)
 - [ ] (任意)`overall.drawio.png`に、今回実装した内容(ALBリスナー、GitHub Actions→ECSデプロイの矢印)を反映するか検討する
 
 ## 2026-08-22 動作確認(SSMトンネル)で発見・修正した不具合
