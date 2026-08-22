@@ -110,6 +110,16 @@ resource "aws_vpc_security_group_egress_rule" "ecs_front_to_vpc_endpoint" {
   description                  = "To VPC Endpoint"
 }
 
+# ECS front → S3エンドポイント (ECS front側のOutbound)
+resource "aws_vpc_security_group_egress_rule" "ecs_front_to_s3" {
+  security_group_id = aws_security_group.ecs_front.id
+  prefix_list_id     = data.aws_prefix_list.s3.id
+  from_port          = 443
+  to_port            = 443
+  ip_protocol        = "tcp"
+  description        = "To S3 (ECR image layers) via Gateway endpoint"
+}
+
 # ECS api ← ALB（ECS api側のInbound）
 resource "aws_vpc_security_group_ingress_rule" "ecs_api_from_alb" {
   security_group_id            = aws_security_group.ecs_api.id
