@@ -6,7 +6,7 @@
   - Outbound：ECS(フロント・API)
 - ECS(フロント)
   - Inbound：ALB
-  - Outbound：Elastic cache, VPCエンドポイント(ecr.api/ecr.dkr/logs)
+  - Outbound：Elastic cache, VPCエンドポイント(ecr.api/ecr.dkr/logs), S3(Gateway経由)
 - ECS(API)
   - Inbound：ALB
   - Outbound：Elastic cache, RDS, VPCエンドポイント(ecr.api/ecr.dkr/logs), S3(画像用バケット, Gateway経由), NAT Gateway経由で外部API呼び出し
