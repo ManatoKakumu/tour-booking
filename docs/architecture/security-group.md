@@ -6,16 +6,13 @@
   - Outbound：ECS(フロント・API)
 - ECS(フロント)
   - Inbound：ALB
-  - Outbound：Elastic cache, VPCエンドポイント(ecr.api/ecr.dkr/logs), S3(Gateway経由)
+  - Outbound：VPCエンドポイント(ecr.api/ecr.dkr/logs), S3(Gateway経由)
 - ECS(API)
   - Inbound：ALB
-  - Outbound：Elastic cache, RDS, VPCエンドポイント(ecr.api/ecr.dkr/logs), S3(画像用バケット, Gateway経由), NAT Gateway経由で外部API呼び出し
-- Elastic cache
-  - Inbound：ECS(フロント・API)、Elastic cache(同期処理)
-  - Outbound：Elastic cache(同期処理)
+  - Outbound：RDS, VPCエンドポイント(ecr.api/ecr.dkr/logs), S3(画像用バケット, Gateway経由), NAT Gateway経由で外部API呼び出し
 - RDS
   - Inbound：ECS(API)
-  - Outbound：なし。プライマリ - スタンバイ間の同期処理はSGの設定にかかわらずAWSが内部で自動的に処理するため、Elastic cacheと異なるが、RDSは特に付与する必要はない
+  - Outbound：なし。プライマリ - スタンバイ間の同期処理はSGの設定にかかわらずAWSが内部で自動的に処理するため、RDSは特に付与する必要はない
 - VPCエンドポイント(Interface型)
   - Inbound：ECS(フロント・API)
   - Outbound：なし
