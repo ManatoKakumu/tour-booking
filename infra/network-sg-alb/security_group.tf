@@ -10,7 +10,7 @@ resource "aws_security_group" "alb" {
 
 resource "aws_security_group" "ecs_front" {
   name        = "ecs-front-sg"
-  description = "Allows inbound from ALB, outbound to ElastiCache, and VPC endpoints"
+  description = "Allows inbound from ALB, outbound to VPC endpoints"
   vpc_id      = aws_vpc.main.id
 
   tags = {
@@ -20,21 +20,11 @@ resource "aws_security_group" "ecs_front" {
 
 resource "aws_security_group" "ecs_api" {
   name        = "ecs-api-sg"
-  description = "Allows inbound from ALB, outbound to ElastiCache, RDS, VPC endpoints, S3, and NAT Gateway for external API calls"
+  description = "Allows inbound from ALB, outbound to RDS, VPC endpoints, S3, and NAT Gateway for external API calls"
   vpc_id      = aws_vpc.main.id
 
   tags = {
     Name = "ecs-api-sg"
-  }
-}
-
-resource "aws_security_group" "elasticache" {
-  name        = "elasticache-sg"
-  description = "Allows inbound from ECS front/API, outbound for replication sync"
-  vpc_id      = aws_vpc.main.id
-
-  tags = {
-    Name = "elasticache-sg"
   }
 }
 
@@ -90,16 +80,6 @@ resource "aws_vpc_security_group_ingress_rule" "ecs_front_from_alb" {
   description                  = "From ALB"
 }
 
-# ECS front → ElastiCache (ECS front側のOutbound)
-resource "aws_vpc_security_group_egress_rule" "ecs_front_to_elasticache" {
-  security_group_id            = aws_security_group.ecs_front.id
-  referenced_security_group_id = aws_security_group.elasticache.id
-  from_port                    = 6379
-  to_port                      = 6379
-  ip_protocol                  = "tcp"
-  description                  = "To ElastiCache"
-}
-
 # ECS front → VPCエンドポイント (ECS front側のOutbound)
 resource "aws_vpc_security_group_egress_rule" "ecs_front_to_vpc_endpoint" {
   security_group_id            = aws_security_group.ecs_front.id
@@ -128,16 +108,6 @@ resource "aws_vpc_security_group_ingress_rule" "ecs_api_from_alb" {
   to_port                      = 3000
   ip_protocol                  = "tcp"
   description                  = "From ALB"
-}
-
-# ECS api → ElastiCache (ECS api側のOutbound)
-resource "aws_vpc_security_group_egress_rule" "ecs_api_to_elasticache" {
-  security_group_id            = aws_security_group.ecs_api.id
-  referenced_security_group_id = aws_security_group.elasticache.id
-  from_port                    = 6379
-  to_port                      = 6379
-  ip_protocol                  = "tcp"
-  description                  = "To ElastiCache"
 }
 
 # ECS api → RDS (ECS api側のOutbound)
@@ -175,46 +145,6 @@ resource "aws_vpc_security_group_egress_rule" "ecs_api_to_s3" {
 }
 
 # ECS api → Stripe (ECS api側のOutbound)はEventBridge+LambdaによるCIDRリスト自動作成を作成後に記載
-
-# ElastiCache ← ECS front（ElastiCache側のInbound）
-resource "aws_vpc_security_group_ingress_rule" "elasticache_from_ecs_front" {
-  security_group_id            = aws_security_group.elasticache.id
-  referenced_security_group_id = aws_security_group.ecs_front.id
-  from_port                    = 6379
-  to_port                      = 6379
-  ip_protocol                  = "tcp"
-  description                  = "From ECS front"
-}
-
-# ElastiCache ← ECS api（ElastiCache側のInbound）
-resource "aws_vpc_security_group_ingress_rule" "elasticache_from_ecs_api" {
-  security_group_id            = aws_security_group.elasticache.id
-  referenced_security_group_id = aws_security_group.ecs_api.id
-  from_port                    = 6379
-  to_port                      = 6379
-  ip_protocol                  = "tcp"
-  description                  = "From ECS api"
-}
-
-# ElastiCache ← ElastiCache（ElastiCache側のInbound）
-resource "aws_vpc_security_group_ingress_rule" "elasticache_sync_inbound" {
-  security_group_id            = aws_security_group.elasticache.id
-  referenced_security_group_id = aws_security_group.elasticache.id
-  from_port                    = 6379
-  to_port                      = 6379
-  ip_protocol                  = "tcp"
-  description                  = "ElastiCache sync(inbound)"
-}
-
-# ElastiCache → ElastiCache（ElastiCache側のOutbound）
-resource "aws_vpc_security_group_egress_rule" "elasticache_sync_outbound" {
-  security_group_id            = aws_security_group.elasticache.id
-  referenced_security_group_id = aws_security_group.elasticache.id
-  from_port                    = 6379
-  to_port                      = 6379
-  ip_protocol                  = "tcp"
-  description                  = "ElastiCache sync(outbound)"
-}
 
 # RDS ← ECS api（RDS側のInbound）
 resource "aws_vpc_security_group_ingress_rule" "rds_from_ecs_api" {

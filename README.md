@@ -22,7 +22,7 @@ Well-Architected Frameworkの各柱に対応させた改善ステップ。実装
 | 4 | SGの最小権限化 | SEC 5-BP02 |
 | 5 | マルチAZ | REL 10-BP05 |
 | 6 | Auto Scaling | REL 11 |
-| 7 | セッション外部化(ElastiCache) | PERF 2 |
+| 7 | セッション管理方式の検討(ElastiCache不採用) | PERF 2 |
 | 8 | CloudFront + WAF | SEC 5 / PERF 4 |
 | 9 | バックアップ・DR(RPO/RTO) | REL 9 / REL 13 |
 | 10 | Savings Plans/コスト最適化 | COST 5 / COST 7 |
