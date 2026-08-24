@@ -13,22 +13,24 @@ variable "api_c_image_tag" {
 locals {
   ecs_services = {
     front-c = {
-      execution_role_arn = aws_iam_role.ecs_execution_front_c.arn
-      ecr_repository_url = aws_ecr_repository.front_c.repository_url
-      log_group_name     = aws_cloudwatch_log_group.front_c.name
-      image_tag          = var.front_c_image_tag
-      subnet_ids         = data.terraform_remote_state.network_sg_alb.outputs.ecs_front_subnet_ids
-      security_group_id  = data.terraform_remote_state.network_sg_alb.outputs.ecs_front_security_group_id
-      target_group_arn   = data.terraform_remote_state.network_sg_alb.outputs.target_group_arns["front-c"]
+      execution_role_arn      = aws_iam_role.ecs_execution_front_c.arn
+      ecr_repository_url      = aws_ecr_repository.front_c.repository_url
+      log_group_name          = aws_cloudwatch_log_group.front_c.name
+      image_tag               = var.front_c_image_tag
+      subnet_ids              = data.terraform_remote_state.network_sg_alb.outputs.ecs_front_subnet_ids
+      security_group_id       = data.terraform_remote_state.network_sg_alb.outputs.ecs_front_security_group_id
+      target_group_arn        = data.terraform_remote_state.network_sg_alb.outputs.target_group_arns["front-c"]
+      target_group_arn_suffix = data.terraform_remote_state.network_sg_alb.outputs.target_group_arn_suffixes["front-c"]
     }
     api-c = {
-      execution_role_arn = aws_iam_role.ecs_execution_api_c.arn
-      ecr_repository_url = aws_ecr_repository.api_c.repository_url
-      log_group_name     = aws_cloudwatch_log_group.api_c.name
-      image_tag          = var.api_c_image_tag
-      subnet_ids         = data.terraform_remote_state.network_sg_alb.outputs.ecs_api_subnet_ids
-      security_group_id  = data.terraform_remote_state.network_sg_alb.outputs.ecs_api_security_group_id
-      target_group_arn   = data.terraform_remote_state.network_sg_alb.outputs.target_group_arns["api-c"]
+      execution_role_arn      = aws_iam_role.ecs_execution_api_c.arn
+      ecr_repository_url      = aws_ecr_repository.api_c.repository_url
+      log_group_name          = aws_cloudwatch_log_group.api_c.name
+      image_tag               = var.api_c_image_tag
+      subnet_ids              = data.terraform_remote_state.network_sg_alb.outputs.ecs_api_subnet_ids
+      security_group_id       = data.terraform_remote_state.network_sg_alb.outputs.ecs_api_security_group_id
+      target_group_arn        = data.terraform_remote_state.network_sg_alb.outputs.target_group_arns["api-c"]
+      target_group_arn_suffix = data.terraform_remote_state.network_sg_alb.outputs.target_group_arn_suffixes["api-c"]
     }
   }
 }
@@ -66,12 +68,14 @@ resource "aws_ecs_task_definition" "this" {
 }
 
 resource "aws_ecs_service" "this" {
-  for_each        = local.ecs_services
-  name            = each.key
-  cluster         = aws_ecs_cluster.c.id
-  task_definition = aws_ecs_task_definition.this[each.key].arn
-  desired_count   = 2
-  launch_type     = "FARGATE"
+  for_each                           = local.ecs_services
+  name                               = each.key
+  cluster                            = aws_ecs_cluster.c.id
+  task_definition                    = aws_ecs_task_definition.this[each.key].arn
+  desired_count                      = 2
+  launch_type                        = "FARGATE"
+  deployment_minimum_healthy_percent = 100
+  deployment_maximum_percent         = 200
 
   network_configuration {
     subnets          = each.value.subnet_ids
@@ -86,13 +90,40 @@ resource "aws_ecs_service" "this" {
   }
 }
 
+resource "aws_appautoscaling_target" "this" {
+  for_each           = local.ecs_services
+  max_capacity       = 3
+  min_capacity       = 2
+  resource_id        = "service/${aws_ecs_cluster.c.name}/${aws_ecs_service.this[each.key].name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  service_namespace  = "ecs"
+}
+
+resource "aws_appautoscaling_policy" "this" {
+  for_each           = local.ecs_services
+  name               = "${each.key}-request-count"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.this[each.key].resource_id
+  scalable_dimension = aws_appautoscaling_target.this[each.key].scalable_dimension
+  service_namespace  = aws_appautoscaling_target.this[each.key].service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    target_value = 100
+
+    predefined_metric_specification {
+      predefined_metric_type = "ALBRequestCountPerTarget"
+      resource_label         = "${data.terraform_remote_state.network_sg_alb.outputs.alb_arn_suffix}/${each.value.target_group_arn_suffix}"
+    }
+  }
+}
+
 resource "aws_ecs_task_definition" "db_user_setup_c" {
   family                   = "db-user-setup-c"
   requires_compatibilities = ["FARGATE"]
-  network_mode              = "awsvpc"
-  cpu                       = "256"
-  memory                    = "512"
-  execution_role_arn        = aws_iam_role.db_user_setup_c.arn
+  network_mode             = "awsvpc"
+  cpu                      = "256"
+  memory                   = "512"
+  execution_role_arn       = aws_iam_role.db_user_setup_c.arn
 
   container_definitions = jsonencode([
     {
