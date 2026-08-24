@@ -1,5 +1,5 @@
 from django.http import JsonResponse
 
-# trigger: イミュータブルタグ衝突回避のためのダミー変更
+# trigger: Auto Scaling導入後、ECRへの再プッシュ確認用
 def health(request):
     return JsonResponse({"status": "ok", "service": "api-c"})
