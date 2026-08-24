@@ -34,3 +34,16 @@ output "target_group_arns" {
     api-c   = aws_lb_target_group.api_c.arn
   }
 }
+
+output "alb_arn_suffix" {
+  value = aws_lb.main.arn_suffix
+}
+
+output "target_group_arn_suffixes" {
+  value = {
+    front-b = aws_lb_target_group.front_b.arn_suffix
+    front-c = aws_lb_target_group.front_c.arn_suffix
+    api-b   = aws_lb_target_group.api_b.arn_suffix
+    api-c   = aws_lb_target_group.api_c.arn_suffix
+  }
+}

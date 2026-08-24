@@ -29,8 +29,8 @@ resource "aws_iam_role_policy" "front_c_ecr_push" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = [
+        Effect = "Allow"
+        Action = [
           "ecr:GetAuthorizationToken",
           "ecs:DescribeTaskDefinition",
           "ecs:RegisterTaskDefinition"
@@ -96,8 +96,8 @@ resource "aws_iam_role_policy" "api_c_ecr_push" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = [
+        Effect = "Allow"
+        Action = [
           "ecr:GetAuthorizationToken",
           "ecs:DescribeTaskDefinition",
           "ecs:RegisterTaskDefinition"

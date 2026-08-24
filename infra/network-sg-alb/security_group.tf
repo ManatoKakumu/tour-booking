@@ -93,11 +93,11 @@ resource "aws_vpc_security_group_egress_rule" "ecs_front_to_vpc_endpoint" {
 # ECS front → S3エンドポイント (ECS front側のOutbound)
 resource "aws_vpc_security_group_egress_rule" "ecs_front_to_s3" {
   security_group_id = aws_security_group.ecs_front.id
-  prefix_list_id     = data.aws_prefix_list.s3.id
-  from_port          = 443
-  to_port            = 443
-  ip_protocol        = "tcp"
-  description        = "To S3 (ECR image layers) via Gateway endpoint"
+  prefix_list_id    = data.aws_prefix_list.s3.id
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+  description       = "To S3 (ECR image layers) via Gateway endpoint"
 }
 
 # ECS api ← ALB（ECS api側のInbound）
@@ -137,11 +137,11 @@ data "aws_prefix_list" "s3" {
 
 resource "aws_vpc_security_group_egress_rule" "ecs_api_to_s3" {
   security_group_id = aws_security_group.ecs_api.id
-  prefix_list_id     = data.aws_prefix_list.s3.id
-  from_port          = 443
-  to_port            = 443
-  ip_protocol        = "tcp"
-  description        = "To S3 (image bucket) via Gateway endpoint"
+  prefix_list_id    = data.aws_prefix_list.s3.id
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+  description       = "To S3 (image bucket) via Gateway endpoint"
 }
 
 # ECS api → Stripe (ECS api側のOutbound)はEventBridge+LambdaによるCIDRリスト自動作成を作成後に記載
