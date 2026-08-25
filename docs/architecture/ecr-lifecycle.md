@@ -12,9 +12,9 @@
 ### 選定理由
 - ECRにプッシュされたイメージには下記の3種類を設ける
   - `current`：ECSに現在使われているイメージに付与する。絶対に削除しない。ライフサイクルポリシーなし
-  - `success`：過去にECSへデプロイ成功したが、今は使われていないイメージに付与する。90日後に削除。数値に根拠はないが、ECSへのデプロイ失敗時に巻き戻せるための保険なので、ECSへの新イメージデプロイ平均間隔より少し長めに設けるのが良いと考えている
-  - `fail`：過去にECSへデプロイ失敗したイメージに付与する。30日後に削除。こちらも数値に根拠はないが、再発防止のための調査にかかる平均時間より少し長めに設けるのが良いと考えている
-  - 新しいイメージでECSへのデプロイが成功したら、現在 `current` のタグを削除したのちに `success` を付与し、新しいイメージに `current` のイメージを付与する
+  - `success-<digest先頭12文字>`：過去にECSへデプロイ成功したが、今は使われていないイメージに付与する。90日後に削除。数値に根拠はないが、ECSへのデプロイ失敗時に巻き戻せるための保険なので、ECSへの新イメージデプロイ平均間隔より少し長めに設けるのが良いと考えている
+  - `fail-<image_tag>`：過去にECSへデプロイ失敗したイメージに付与する。30日後に削除。こちらも数値に根拠はないが、再発防止のための調査にかかる平均時間より少し長めに設けるのが良いと考えている
+  - 新しいイメージでECSへのデプロイが成功したら、現在 `current` のタグを削除したのちに `success-<digest先頭12文字>` を付与し、新しいイメージに `current` のイメージを付与する
 - EventBridge+Lambda構成にする
   - ECSへのデプロイが行われた際に必要な処理なので、イベント駆動型が適しており、EventBridgeを使えばいいと判断
   - 実際のタグ付与処理に関しては、特にOSなどを管理する必要がない、かつ常時稼働させるべきものでもなくコストを抑えたい、という観点から、Lambdaと判断した
@@ -32,6 +32,8 @@
 - Lambda
   - `ecs:ListServiceDeployments`, `ecs:DescribeServiceDeployments`, `ecs:DescribeServiceRevisions`, `ecs:DescribeServices` を特定のECSサービス(4種類)のARN指定で絞る。ECSデプロイサーキットブレーカーからデプロイ成功可否の情報を得るために付与
   - `ecr:PutImage`, `ecr:BatchGetImage`, `ecr:DescribeImages`, `ecr:BatchDeleteImage` を特定のECRリポジトリ(4種類)のARN指定で絞る。ECRイメージのタグ付与・削除に必要
+  - `ecs:DescribeTaskDefinition` をResourceは*で付与
+  - `sns:Publish` を、Lambdaが処理失敗時にSNSトピックに配信できるよう、特定のARNに絞って付与する
   - Lambdaが呼び出されるよう、特定のEventBridgeのARN指定でPrincipalを設定する
 
 ### 可用性設計
