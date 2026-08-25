@@ -23,6 +23,9 @@ backend.hcl
 __pycache__/
 *.pyc
 
+# Lambda build artifacts
+*.zip
+
 # Node.js
 node_modules/
 .next/
