@@ -17,7 +17,7 @@ Step2〜8の全体構成図は[overall.drawio.png](overall.drawio.png)を参照�
 | ALB | 構築中 | [alb.md](alb.md) |
 | Cognito | 構築中 | [cognito.md](cognito.md) |
 | データベース | 完了 | [database.md](database.md) |
-| CI/CD | 構築中 | [ci-cd.md](ci-cd.md) |
+| CI/CD | 完了 | [ci-cd.md](ci-cd.md) |
 | コンピュート | 完了 | [compute.md](compute.md) |
 | ECRライフサイクル | 完了 | [ecr-lifecycle.md](ecr-lifecycle.md) |
 
