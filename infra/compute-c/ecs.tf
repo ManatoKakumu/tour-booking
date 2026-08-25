@@ -88,6 +88,11 @@ resource "aws_ecs_service" "this" {
     container_name   = each.key
     container_port   = 3000
   }
+
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
 }
 
 resource "aws_appautoscaling_target" "this" {
