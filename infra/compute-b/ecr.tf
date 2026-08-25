@@ -23,10 +23,10 @@ resource "aws_ecr_lifecycle_policy" "front_b" {
     rules = [
       {
         rulePriority = 1
-        description  = "「成功」タグの画像を90日で削除"
+        description  = "「success」タグの画像を90日で削除"
         selection = {
           tagStatus     = "tagged"
-          tagPrefixList = ["成功"]
+          tagPrefixList = ["success"]
           countType     = "sinceImagePushed"
           countUnit     = "days"
           countNumber   = 90
@@ -37,10 +37,10 @@ resource "aws_ecr_lifecycle_policy" "front_b" {
       },
       {
         rulePriority = 2
-        description  = "「失敗」タグの画像を30日で削除"
+        description  = "「fail」タグの画像を30日で削除"
         selection = {
           tagStatus     = "tagged"
-          tagPrefixList = ["失敗"]
+          tagPrefixList = ["fail"]
           countType     = "sinceImagePushed"
           countUnit     = "days"
           countNumber   = 30
@@ -60,10 +60,10 @@ resource "aws_ecr_lifecycle_policy" "api_b" {
     rules = [
       {
         rulePriority = 1
-        description  = "「成功」タグの画像を90日で削除"
+        description  = "「success」タグの画像を90日で削除"
         selection = {
           tagStatus     = "tagged"
-          tagPrefixList = ["成功"]
+          tagPrefixList = ["success"]
           countType     = "sinceImagePushed"
           countUnit     = "days"
           countNumber   = 90
@@ -74,10 +74,10 @@ resource "aws_ecr_lifecycle_policy" "api_b" {
       },
       {
         rulePriority = 2
-        description  = "「失敗」タグの画像を30日で削除"
+        description  = "「fail」タグの画像を30日で削除"
         selection = {
           tagStatus     = "tagged"
-          tagPrefixList = ["失敗"]
+          tagPrefixList = ["fail"]
           countType     = "sinceImagePushed"
           countUnit     = "days"
           countNumber   = 30
