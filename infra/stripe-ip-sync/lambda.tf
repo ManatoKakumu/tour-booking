@@ -9,6 +9,7 @@ resource "aws_lambda_function" "stripe_ip" {
   role             = aws_iam_role.stripe_ip_lambda.arn
   handler          = "handler.handler"
   runtime          = "python3.12"
+  timeout          = 100
   filename         = data.archive_file.stripe_ip.output_path
   source_code_hash = data.archive_file.stripe_ip.output_base64sha256
 
