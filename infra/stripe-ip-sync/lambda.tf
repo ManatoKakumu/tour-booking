@@ -13,4 +13,10 @@ resource "aws_lambda_function" "stripe_ip" {
   source_code_hash = data.archive_file.stripe_ip.output_base64sha256
 
   reserved_concurrent_executions = 1
+
+  environment {
+    variables = {
+      PREFIX_LIST_ID = data.terraform_remote_state.network_sg_alb.outputs.managed_prefix_for_stripe_id
+    }
+  }
 }

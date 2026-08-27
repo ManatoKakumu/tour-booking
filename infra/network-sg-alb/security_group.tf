@@ -148,7 +148,7 @@ resource "aws_vpc_security_group_egress_rule" "ecs_api_to_s3" {
 resource "aws_ec2_managed_prefix_list" "stripe" {
   name           = "stripe-api-ips"
   address_family = "IPv4"
-  max_entries    = 50
+  max_entries    = 200
 }
 
 resource "aws_vpc_security_group_egress_rule" "ecs_api_to_stripe" {
