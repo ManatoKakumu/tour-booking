@@ -144,7 +144,21 @@ resource "aws_vpc_security_group_egress_rule" "ecs_api_to_s3" {
   description       = "To S3 (image bucket) via Gateway endpoint"
 }
 
-# ECS api → Stripe (ECS api側のOutbound)はEventBridge+LambdaによるCIDRリスト自動作成を作成後に記載
+# ECS api → Stripe (ECS api側のOutbound)
+resource "aws_ec2_managed_prefix_list" "stripe" {
+  name           = "stripe-api-ips"
+  address_family = "IPv4"
+  max_entries    = 150
+}
+
+resource "aws_vpc_security_group_egress_rule" "ecs_api_to_stripe" {
+  security_group_id = aws_security_group.ecs_api.id
+  prefix_list_id    = aws_ec2_managed_prefix_list.stripe.id
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+  description       = "To Stripe"
+}
 
 # RDS ← ECS api（RDS側のInbound）
 resource "aws_vpc_security_group_ingress_rule" "rds_from_ecs_api" {

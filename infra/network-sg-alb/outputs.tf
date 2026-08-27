@@ -47,3 +47,11 @@ output "target_group_arn_suffixes" {
     api-c   = aws_lb_target_group.api_c.arn_suffix
   }
 }
+
+output "managed_prefix_for_stripe_id" {
+  value = aws_ec2_managed_prefix_list.stripe.id
+}
+
+output "managed_prefix_for_stripe_arn" {
+  value = aws_ec2_managed_prefix_list.stripe.arn
+}

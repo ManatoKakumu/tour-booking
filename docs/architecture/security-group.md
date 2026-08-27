@@ -31,4 +31,4 @@
   - Stripeが公開している、API通信用のIPアドレス一覧を参照する
   - IPアドレス一覧をマネージドプレフィックスリストに登録する
   - ECS(API)のSGに、Outboundでプレフィックスリストを許可するルールを追加する
-  - IPアドレス変更に備え、定期的にプレフィックスリストを更新する処理を、EventBridge+Lambdaで自動的に実行させる
+  - IPアドレス変更に備え、Lambdaで手動実行する [docs/adr/005-stripe-ip-sync-trigger-selection.md](../adr/005-stripe-ip-sync-trigger-selection.md)参照
