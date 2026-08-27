@@ -82,3 +82,5 @@
     - ライフサイクルポリシーはリポジトリ1つに紐づく性質であるため、compute-b/compute-cに記載
   - Lambda/EventBridge/SNS/SQS
     - 一方、デプロイ成功可否を検知してタグを付け替えるLambda/EventBridge/SNS/SQSによる処理は、フロント・APIのB・C4つのサービスに対して1つの共通処理が動く構成であり、個別のstateには属さない。そのため、独立したstateとした
+- Lambda(Stripe更新処理)
+  - `network-sg-alb` に同居させると、Lambdaの更新のたびに、土台となるNW構成要素に対して無駄なスキャンが走ることになるので、独立したステートとした。また、独立させることで、事故の影響範囲を小さくしたい
