@@ -1,3 +1,5 @@
+data "aws_caller_identity" "current" {}
+
 resource "aws_iam_role" "ecr_tagging_lambda" {
   name = "ecr-tagging-lambda"
 
@@ -8,6 +10,11 @@ resource "aws_iam_role" "ecr_tagging_lambda" {
         Effect    = "Allow"
         Principal = { Service = "lambda.amazonaws.com" }
         Action    = "sts:AssumeRole"
+        Condition = {
+          StringEquals = {
+            "aws:SourceArn" = "arn:aws:lambda:ap-northeast-1:${data.aws_caller_identity.current.account_id}:function:ecr-tagging"
+          }
+        }
       }
     ]
   })
