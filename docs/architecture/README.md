@@ -21,6 +21,10 @@ Step2〜8の全体構成図は[overall.drawio.png](overall.drawio.png)を参照�
 | コンピュート | 完了 | [compute.md](compute.md) |
 | ECRライフサイクル | 完了 | [ecr-lifecycle.md](ecr-lifecycle.md) |
 | Stripe IPリスト同期 | 完了 | [stripe-ip-sync.md](stripe-ip-sync.md) |
+| CloudFront | 構築中 | [cloudfront.md](cloudfront.md) |
+| Route53 | 構築中 | [route53.md](route53.md) |
+| ACM | 構築中 | [acm.md](acm.md) |
+| S3(静的配信) | 構築中 | [s3.md](s3.md) |
 
 状態の値は「設計中 / 設計レビュー待ち / 設計差し戻し中 / 構築中 / 実装レビュー待ち / 完了」(`templates/design-review-template.md`の運用に準じる)。
 
