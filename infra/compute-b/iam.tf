@@ -325,7 +325,7 @@ resource "aws_iam_role_policy" "api_b_task" {
       {
         Effect   = "Allow"
         Action   = "s3:PutObject"
-        Resource = "${data.terraform_remote_state.cloudfront_route53_acm_s3.outputs.image_bucket_arn}/*"
+        Resource = "${data.terraform_remote_state.cloudfront_s3.outputs.image_bucket_arn}/*"
       }
     ]
   })
