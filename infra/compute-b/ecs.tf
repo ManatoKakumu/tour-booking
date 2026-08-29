@@ -13,6 +13,7 @@ variable "api_b_image_tag" {
 locals {
   ecs_services = {
     front-b = {
+      task_role_arn           = null
       execution_role_arn      = aws_iam_role.ecs_execution_front_b.arn
       ecr_repository_url      = aws_ecr_repository.front_b.repository_url
       log_group_name          = aws_cloudwatch_log_group.front_b.name
@@ -24,6 +25,7 @@ locals {
     }
     api-b = {
       execution_role_arn      = aws_iam_role.ecs_execution_api_b.arn
+      task_role_arn           = aws_iam_role.api_b_task.arn
       ecr_repository_url      = aws_ecr_repository.api_b.repository_url
       log_group_name          = aws_cloudwatch_log_group.api_b.name
       image_tag               = var.api_b_image_tag
@@ -43,6 +45,7 @@ resource "aws_ecs_task_definition" "this" {
   cpu                      = "256"
   memory                   = "512"
   execution_role_arn       = each.value.execution_role_arn
+  task_role_arn            = each.value.task_role_arn
 
   container_definitions = jsonencode([
     {
