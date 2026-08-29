@@ -121,7 +121,7 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   viewer_certificate {
-    acm_certificate_arn = aws_acm_certificate.cloudfront.arn
+    acm_certificate_arn = data.terraform_remote_state.route53_acm.outputs.cloudfront_certificate_arn
     ssl_support_method  = "sni-only"
   }
 
@@ -129,5 +129,17 @@ resource "aws_cloudfront_distribution" "main" {
     geo_restriction {
       restriction_type = "none"
     }
+  }
+}
+
+resource "aws_route53_record" "main" {
+  zone_id = data.terraform_remote_state.route53_acm.outputs.zone_id
+  name    = "sample-sample.jp"
+  type    = "A"
+
+  alias {
+    name                   = aws_cloudfront_distribution.main.domain_name
+    zone_id                = aws_cloudfront_distribution.main.hosted_zone_id
+    evaluate_target_health = false
   }
 }
