@@ -20,11 +20,11 @@ data "terraform_remote_state" "database" {
   }
 }
 
-data "terraform_remote_state" "cloudfront_route53_acm_s3" {
+data "terraform_remote_state" "cloudfront_s3" {
   backend = "s3"
   config = {
     bucket = var.tfstate_bucket
-    key    = "cloudfront-route53-acm-s3/terraform.tfstate"
+    key    = "cloudfront-s3/terraform.tfstate"
     region = "ap-northeast-1"
   }
 }
