@@ -55,6 +55,38 @@ resource "aws_s3_bucket_policy" "static_page_bucket" {
         Principal = { AWS = var.developer_iam_user_arn }
         Action    = "s3:PutObject"
         Resource  = "${aws_s3_bucket.static_page_bucket.arn}/*"
+      },
+      {
+        Effect    = "Allow"
+        Principal = { Service = "cloudfront.amazonaws.com" }
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.static_page_bucket.arn}/*"
+        Condition = {
+          StringEquals = {
+            "AWS:SourceArn" = aws_cloudfront_distribution.main.arn
+          }
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_s3_bucket_policy" "image_bucket" {
+  bucket = aws_s3_bucket.image_bucket.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = { Service = "cloudfront.amazonaws.com" }
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.image_bucket.arn}/*"
+        Condition = {
+          StringEquals = {
+            "AWS:SourceArn" = aws_cloudfront_distribution.main.arn
+          }
+        }
       }
     ]
   })
