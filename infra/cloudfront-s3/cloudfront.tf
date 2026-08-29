@@ -76,7 +76,7 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   ordered_cache_behavior {
-    path_pattern           = "/"
+    path_pattern           = "index.html"
     target_origin_id       = "static-page-bucket"
     viewer_protocol_policy = "redirect-to-https"
     allowed_methods        = ["GET", "HEAD"]
