@@ -55,3 +55,11 @@ output "managed_prefix_for_stripe_id" {
 output "managed_prefix_for_stripe_arn" {
   value = aws_ec2_managed_prefix_list.stripe.arn
 }
+
+output "alb_arn" {
+  value = aws_lb.main.arn
+}
+
+output "alb_dns_name" {
+  value = aws_lb.main.dns_name
+}

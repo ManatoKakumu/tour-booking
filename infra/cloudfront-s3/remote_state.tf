@@ -11,20 +11,20 @@ data "terraform_remote_state" "network_sg_alb" {
   }
 }
 
-data "terraform_remote_state" "database" {
+data "terraform_remote_state" "compute_b" {
   backend = "s3"
   config = {
     bucket = var.tfstate_bucket
-    key    = "database/terraform.tfstate"
+    key    = "compute-b/terraform.tfstate"
     region = "ap-northeast-1"
   }
 }
 
-data "terraform_remote_state" "cloudfront_s3" {
+data "terraform_remote_state" "route53_acm" {
   backend = "s3"
   config = {
     bucket = var.tfstate_bucket
-    key    = "cloudfront-s3/terraform.tfstate"
+    key    = "route53-acm/terraform.tfstate"
     region = "ap-northeast-1"
   }
 }

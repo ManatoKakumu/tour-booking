@@ -299,3 +299,34 @@ resource "aws_iam_role_policy" "db_user_setup_b" {
     ]
   })
 }
+
+resource "aws_iam_role" "api_b_task" {
+  name = "api-b-task"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = { Service = "ecs-tasks.amazonaws.com" }
+        Action    = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "api_b_task" {
+  name = "api-b-task-policy"
+  role = aws_iam_role.api_b_task.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "s3:PutObject"
+        Resource = "${data.terraform_remote_state.cloudfront_s3.outputs.image_bucket_arn}/*"
+      }
+    ]
+  })
+}

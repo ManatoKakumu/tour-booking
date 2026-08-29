@@ -55,10 +55,36 @@ resource "aws_vpc_endpoint" "s3" {
   service_name      = "com.amazonaws.ap-northeast-1.s3"
   vpc_endpoint_type = "Gateway"
   route_table_ids   = [aws_route_table.api.id, aws_route_table.front.id]
+  policy            = data.aws_iam_policy_document.s3_endpoint.json
 
   tags = {
     Name = "vpce-s3-gateway"
   }
 }
 
-# エンドポイントポリシー(画像用バケットへの限定)は、S3/CloudFrontレイヤー構築後に追加
+data "aws_iam_policy_document" "s3_endpoint" {
+  statement {
+    effect    = "Allow"
+    actions   = ["s3:GetObject"]
+    resources = ["arn:aws:s3:::prod-ap-northeast-1-starport-layer-bucket/*"]
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+  }
+
+  statement {
+    effect    = "Allow"
+    actions   = ["s3:PutObject"]
+    resources = ["${data.terraform_remote_state.cloudfront_s3.outputs.image_bucket_arn}/*"]
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+    condition {
+      test     = "IpAddress"
+      variable = "aws:SourceIp"
+      values   = ["10.0.2.0/24", "10.0.12.0/24"]
+    }
+  }
+}

@@ -48,7 +48,22 @@ resource "aws_security_group" "vpc_endpoint" {
   }
 }
 
-# ALB ← CloudFrontのSGはCloudFront作成後に記載
+data "aws_security_group" "cloudfront_vpc_origins" {
+  filter {
+    name   = "group-name"
+    values = ["CloudFront-VPCOrigins-Service-SG"]
+  }
+  vpc_id = aws_vpc.main.id
+}
+
+# ALB ← CloudFront (ALB側のInbound)
+resource "aws_vpc_security_group_ingress_rule" "alb_from_cloudfront" {
+  security_group_id            = aws_security_group.alb.id
+  referenced_security_group_id = data.aws_security_group.cloudfront_vpc_origins.id
+  from_port                    = 443
+  to_port                      = 443
+  ip_protocol                  = "tcp"
+}
 
 # ALB → ECS front (ALB側のOutbound)
 resource "aws_vpc_security_group_egress_rule" "alb_to_ecs_front" {
