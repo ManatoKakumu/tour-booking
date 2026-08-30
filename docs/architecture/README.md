@@ -25,6 +25,7 @@ Step2〜8の全体構成図は[overall.drawio.png](overall.drawio.png)を参照�
 | Route53 | 完了 | [route53.md](route53.md) |
 | ACM | 完了 | [acm.md](acm.md) |
 | S3(静的配信) | 完了 | [s3.md](s3.md) |
+| WAF | 構築中 | [waf.md](waf.md) |
 
 状態の値は「設計中 / 設計レビュー待ち / 設計差し戻し中 / 構築中 / 実装レビュー待ち / 完了」(`templates/design-review-template.md`の運用に準じる)。
 
