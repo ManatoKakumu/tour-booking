@@ -93,3 +93,93 @@
 - [ ] Cognito User Poolへの`aws_wafv2_web_acl_association`実装、CI/CD側IAMポリシーへの`wafv2:*`権限追加
 - [ ] WAFログの出力先(CloudWatch Logs等)を実装する
 - [ ] `docs/architecture/README.md`のWAF行を追加し、状態を「構築中」にする
+
+## 2026-08-30 実装レビュー
+
+## レビュー対象
+
+- 対象: `infra/waf/`(新規)・`infra/network-sg-alb/cognito.tf`(Threat Protection追加)・`infra/cloudfront-s3/cloudfront.tf`・`remote_state.tf`(Web ACL関連付け追加)
+- 対応Step: Step8後半(WAF)の構築フェーズ
+- レビュー日: 2026-08-30
+
+## 総評
+
+Web ACL 3個(CloudFront/User Pool B/User Pool C)の実装・関連付け・ログ出力まで完了し、`terraform apply`が成功しています。実装レビューとしては合格とし、`docs/architecture/README.md`の状態を「完了」に更新して問題ありません。
+
+このセッション最大の出来事は、**設計レビュー通過後の実装フェーズで、設計の前提自体が誤っていたことが発覚した**ことです。User Pool CにATPを付与する設計は設計レビューでは合格としていましたが、実際に`apply`したところ「ATPを含むWeb ACLはCognito User Poolに関連付けられない」というAWS公式の制約に阻まれ、Cognito自身のThreat Protection(Plus tier)への置き換えという設計差し戻しが発生しました。設計レビューの時点でこの制約(AWS公式ドキュメントの一次情報)まで確認しきれていなかったのはレビュー側(Claude)の見落としでもあり、次回以降「新しいAWS機能を採用する際は、対象リソースとの組み合わせ制約を一次情報で確認してから設計レビューを通す」という教訓として残します。
+
+もう一つの出来事は、WAFとは直接関係のない**ALBの片方AZでのENI欠落インシデント**です。原因の切り分け(WAFログでALLOWを確認、SSMトンネル経由でALB→Cognito認証フローが正常に動くことを直接確認、`-replace`でのALB再作成を試行)を通じて、WAF自体の実装には問題が無いこと、AWS側のプラットフォーム的な不整合であることを筋道立てて特定できました。`.claude/DESIGN_NOTES.md`に診断手順ごと記録済みです。
+
+## 観点別レビュー
+
+### 設計
+
+- Web ACL 3個の構成自体は設計通り実装できたが、上記の通りATP×Cognitoの非互換が実装フェーズで発覚し、Cognito Threat Protectionへの置き換えという設計差し戻しが発生した。差し戻し後の再設計(B: MFAのみ/C: Threat Protection、WAF側はDDoS対応のみに統一)は、既存の非対称設計の考え方を保ったまま行えている
+
+### セキュリティ
+
+- WAFログ(CloudWatch Logs)で、実際のリクエストが`ALLOW`(Default_Action)判定されていることを確認できた。マネージドルール(CRS・既知の不正な入力・DDoS対応)が想定通り機能している
+- ALB→Cognito Hosted UIへの認証リダイレクトが正常に機能することを、SSMトンネル経由の直接アクセスで確認できた(`redirect_mismatch`はlocalhostでのテストに起因する想定内のエラーで、ALB/Cognito設定自体の不備ではないと正しく切り分けられた)
+- Cognito Threat Protection(Plus tier、`compromised_credentials_risk_configuration`)への置き換えが正しく実装された
+
+### 可用性
+
+- ALBが2AZ設定にもかかわらず片方のAZにENIが存在しないインシデントが発生。WAF・Cognito・SG・VPC Originいずれも正常であることを個別に確認した上で、AWS側の問題と結論づけたプロセスは筋道立っている。ただし根本原因は未解明のまま(AWS側の一時的な不整合と推定)であり、次回`network-sg-alb`再構築時に再発しないか確認が必要
+
+### 運用性
+
+- WAFログの実装(`aws_wafv2_web_acl_logging_configuration`、us-east-1 provider要件込み)が完了し、実際にログが出力されることを確認できた
+- ALBのAZ欠落インシデントの調査で、`describe-network-interfaces`によるENI確認、`set-subnets`による強制変更、リソースの`-replace`という段階的な切り分け手順を実践できた。この手順は`DESIGN_NOTES.md`に記録し、次回以降再利用可能にした
+- SSMトンネル検証で使った一時EC2・IAMロール・インスタンスプロファイルは、検証後に漏れなく削除できている(Terraform管理外のリソースの後片付けとして重要な習慣)
+
+### 保守性
+
+- ATP撤去に伴い、`waf.md`・`cognito.md`両方のドキュメントを実装内容に追従して修正できた。特にコスト欄の修正では、ATPの料金体系の見落とし(標準ルールとは別建て)と、計算式の桁ズレ(100万を100,000と誤記)という2つの誤りを、いずれも指摘後に自力で修正できた
+
+### コスト
+
+- 最終的な月額理論値は、`waf.md`が$20.0006(Web ACL3個+ルール5個+リクエスト従量課金、ATP撤去により当初の$30.0006から減少)、`cognito.md`がC側のPlus tier移行分$20(B側Essentialsのまま$0)。Plus tierには無料枠が無いという料金体系の違いも正しく反映できている
+
+### パフォーマンス
+
+- 特筆事項なし。設計レビュー時点の評価から変更なし
+
+### Terraform化した場合の改善点
+
+- `AWSManagedRulesAntiDDoSRuleSet`は`managed_rule_group_configs`(`managed_rule_group_statement`の内側)が必須、かつ`challenge`機能を`ENABLED`にする場合は`exempt_uri_regular_expression`が必須という、ドキュメントだけでは気づきにくい詳細仕様があった。`terraform plan`ではなく実際の`apply`(AWS API側のバリデーション)で初めて発覚するパターンだったため、今後同様の新しいマネージドルールグループを使う際は、AWS providerの一次情報(GitHub上のマークダウン)を先に確認する習慣が有効
+- CLOUDFRONTスコープのリソースは、Web ACL本体だけでなく、ロググループ・ロギングconfigにも`provider = aws.us_east_1`が必要という点は、忘れやすい典型パターンとして`DESIGN_NOTES.md`に記録済み
+
+### AWS Well-Architected Framework 6本柱
+
+- 運用上の優秀性: インシデント発生時の切り分け手順(ログ確認→直接アクセス確認→リソース再作成→AWS側問題と判断)を実践し、記録に残せた
+- セキュリティ: 実装フェーズでの制約発覚に対し、代替手段(Cognito Threat Protection)へ適切に切り替えられた
+- 信頼性: ALBのAZ欠落という未解決のインシデントが残るが、WAF自体の信頼性(ログ・認証フロー)は確認済み
+- パフォーマンス効率: 変更なし
+- コスト最適化: Plus tierの無料枠無しという特性を踏まえた正確なコスト試算ができている
+- 持続可能性: 特筆事項なし
+
+### 実務ならどう設計するか
+
+- 「設計レビューを通過した内容が、実装フェーズで技術的に成立しないと判明する」というのは実務でも起こり得る場面。今回のように、判明した時点で速やかに設計文書とコードの両方に反映し、判断の経緯を記録に残せたことは、実務のインシデント対応・設計変更管理としても妥当なプロセス
+- 原因不明のインフラ不整合(今回のALB AZ欠落)に遭遇した際、「自分たちの設定が悪いのか、プラットフォーム側の問題なのか」を、関連コンポーネントを1つずつ個別に確認して切り分ける進め方は、実務のトラブルシューティングでも中心的な考え方
+
+## 理解できていること
+
+- WAFのマネージドルールグループごとに追加設定(`managed_rule_group_configs`)が必要な場合があり、その要否・必須項目はAWS API側のバリデーションで初めて分かることがあること
+- CLOUDFRONTスコープのリソース(Web ACL・ロググループ・ロギングconfig)がus-east-1を要求する範囲
+- ATPとCognitoの非互換性、およびその技術的理由(Cognitoがmanaged login/hosted UIのリクエストボディをWAFに転送しないこと)
+- インフラの不整合が発生した際の切り分けの進め方(ログ・直接アクセス・リソース再作成による原因特定)
+
+## 曖昧なこと
+
+- ALBの片方AZでのENI欠落の根本原因(AWS側の内部問題のため、こちら側の情報だけでは特定しきれない)
+
+## 理解できていないこと
+
+- 特になし
+
+## 次のアクション
+
+- [ ] `docs/architecture/README.md`のWAFの状態を「完了」に更新する
+- [ ] 次回`network-sg-alb`を新規構築する際、ALBが両方のAZに正しくENIを持つか確認する(再発する場合はAWSサポートへの問い合わせも検討)
+- [ ] Step10(ロードマップ全体)完了後のフェーズで、コスト計算時の単位・桁チェックを習慣化する(`cloudfront-route53-acm-s3`・`waf`と2回連続で同種のミスが発生しているため)
