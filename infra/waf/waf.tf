@@ -63,6 +63,17 @@ resource "aws_wafv2_web_acl" "cloudfront" {
       managed_rule_group_statement {
         name        = "AWSManagedRulesAntiDDoSRuleSet"
         vendor_name = "AWS"
+
+        managed_rule_group_configs {
+          aws_managed_rules_anti_ddos_rule_set {
+            client_side_action_config {
+              challenge {
+                usage_of_action = "DISABLED"
+              }
+            }
+            sensitivity_to_block = "MEDIUM"
+          }
+        }
       }
     }
 
@@ -100,6 +111,17 @@ resource "aws_wafv2_web_acl" "user_pool_b" {
       managed_rule_group_statement {
         name        = "AWSManagedRulesAntiDDoSRuleSet"
         vendor_name = "AWS"
+
+        managed_rule_group_configs {
+          aws_managed_rules_anti_ddos_rule_set {
+            client_side_action_config {
+              challenge {
+                usage_of_action = "DISABLED"
+              }
+            }
+            sensitivity_to_block = "MEDIUM"
+          }
+        }
       }
     }
 
@@ -137,34 +159,23 @@ resource "aws_wafv2_web_acl" "user_pool_c" {
       managed_rule_group_statement {
         name        = "AWSManagedRulesAntiDDoSRuleSet"
         vendor_name = "AWS"
+
+        managed_rule_group_configs {
+          aws_managed_rules_anti_ddos_rule_set {
+            client_side_action_config {
+              challenge {
+                usage_of_action = "DISABLED"
+              }
+            }
+            sensitivity_to_block = "MEDIUM"
+          }
+        }
       }
     }
 
     visibility_config {
       cloudwatch_metrics_enabled = true
       metric_name                = "ddos-rule-set"
-      sampled_requests_enabled   = true
-    }
-  }
-
-  rule {
-    name     = "atp-rule-set"
-    priority = 2
-
-    override_action {
-      none {}
-    }
-
-    statement {
-      managed_rule_group_statement {
-        name        = "AWSManagedRulesATPRuleSet"
-        vendor_name = "AWS"
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "atp-rule-set"
       sampled_requests_enabled   = true
     }
   }
