@@ -28,3 +28,12 @@ data "terraform_remote_state" "route53_acm" {
     region = "ap-northeast-1"
   }
 }
+
+data "terraform_remote_state" "waf" {
+  backend = "s3"
+  config = {
+    bucket = var.tfstate_bucket
+    key    = "waf/terraform.tfstate"
+    region = "ap-northeast-1"
+  }
+}

@@ -24,6 +24,7 @@ resource "aws_cloudfront_distribution" "main" {
   enabled             = true
   default_root_object = "index.html"
   aliases             = ["sample-sample.jp"]
+  web_acl_id          = data.terraform_remote_state.waf.outputs.cloudfront_web_acl_arn
 
   origin {
     domain_name              = aws_s3_bucket.image_bucket.bucket_regional_domain_name

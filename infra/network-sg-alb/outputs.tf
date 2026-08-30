@@ -63,3 +63,11 @@ output "alb_arn" {
 output "alb_dns_name" {
   value = aws_lb.main.dns_name
 }
+
+output "user_pool_b_arn" {
+  value = aws_cognito_user_pool.b.arn
+}
+
+output "user_pool_c_arn" {
+  value = aws_cognito_user_pool.c.arn
+}

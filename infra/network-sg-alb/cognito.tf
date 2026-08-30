@@ -15,6 +15,12 @@ resource "aws_cognito_user_pool" "b" {
 resource "aws_cognito_user_pool" "c" {
   name = "tour-booking-c"
 
+  user_pool_tier = "PLUS"
+
+  user_pool_add_ons {
+    advanced_security_mode = "ENFORCED"
+  }
+
   tags = {
     Name = "tour-booking-user-pool-c"
   }
@@ -72,4 +78,14 @@ resource "aws_secretsmanager_secret" "cognito_client_secret_c" {
 resource "aws_secretsmanager_secret_version" "cognito_client_secret_c" {
   secret_id     = aws_secretsmanager_secret.cognito_client_secret_c.id
   secret_string = aws_cognito_user_pool_client.c.client_secret
+}
+
+resource "aws_cognito_risk_configuration" "c" {
+  user_pool_id = aws_cognito_user_pool.c.id
+
+  compromised_credentials_risk_configuration {
+    actions {
+      event_action = "BLOCK"
+    }
+  }
 }
