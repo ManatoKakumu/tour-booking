@@ -17,8 +17,10 @@ resource "aws_db_instance" "main" {
   vpc_security_group_ids = [data.terraform_remote_state.network_sg_alb.outputs.rds_security_group_id]
   # 誤削除を防ぐためにtrueにすべきだが、個人開発でコストを抑えたいので、terraform destroyしたら削除されるよう、falseとしている
   deletion_protection = false
-  # バックアップについては今後決めるので、暫定0としておく
-  backup_retention_period = 0
+
+  backup_retention_period = 7
+  preferred_backup_window = "18:30-19:00"
+  maintenance_window      = "mon:17:30-mon:18:00"
   skip_final_snapshot     = true
 
   username                    = "admin"
