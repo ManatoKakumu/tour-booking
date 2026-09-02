@@ -19,7 +19,7 @@ resource "aws_db_instance" "main" {
   deletion_protection = false
 
   backup_retention_period = 7
-  preferred_backup_window = "18:30-19:00"
+  backup_window           = "18:30-19:00"
   maintenance_window      = "mon:17:30-mon:18:00"
   skip_final_snapshot     = true
 
