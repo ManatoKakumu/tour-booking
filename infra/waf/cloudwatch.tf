@@ -15,7 +15,7 @@ resource "aws_cloudwatch_log_group" "waf_user_pool_c" {
 }
 
 resource "aws_wafv2_web_acl_logging_configuration" "waf_cloudfront" {
-  provider                 = aws.us_east_1
+  provider                = aws.us_east_1
   log_destination_configs = [aws_cloudwatch_log_group.waf_cloudfront.arn]
   resource_arn            = aws_wafv2_web_acl.cloudfront.arn
 }
