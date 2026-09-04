@@ -44,7 +44,7 @@
 
 - 初回の試算では、ATPを他の標準マネージドルールグループと同じ$1/月のルールとして扱い、しかもその1ルールとしてすら合計数(5個)に含め忘れており、結果としてATPのコストがまるごと計上されていなかった。公式ページ(https://aws.amazon.com/waf/pricing/)で、ATPが$10/月の固定費+従量課金という別建ての料金体系であることを確認した上で指摘し、修正できた
 - 修正後もリクエスト数の計算式(`$0.6 * 1000 / 100000`)に桁のズレ(100万を100,000と誤って計算)が残っている。合計額への影響は無視できる範囲だが、`cloudfront-route53-acm-s3`の実装レビューでも同種の単位ミス(1,000リクエスト単価の掛け違い)を指摘しており、**単位・桁の取り扱いは複数セッションにまたがる継続的な弱点**として意識してほしい
-- 最終的な合計(約$30/月、Web ACL 3個+ルール5個+ATP固定費+リクエスト従量課金)は、実運用(destroy運用でほぼ無課金)とは別に、常時稼働を想定した理論値として記載する方針を維持できている([[cost-section-convention]]参照)
+- 最終的な合計(約$30/月、Web ACL 3個+ルール5個+ATP固定費+リクエスト従量課金)は、実際の運用コストとは別に、常時稼働を想定した理論値として記載する方針を維持できている
 
 ### パフォーマンス
 
@@ -54,7 +54,7 @@
 
 - CloudFront用Web ACL(us-east-1、スコープ`CLOUDFRONT`)は、既存の`route53-acm`レイヤーで導入済みのus-east-1 provider aliasをそのまま再利用できる
 - Cognito User PoolへのWeb ACL関連付けは`aws_wafv2_web_acl_association`(`resource_arn`にUser Pool ARNを指定)で行う。ALBへの関連付けと同じリソースタイプなので、実装パターン自体は流用できる
-- CI/CD(WAFレイヤー用OIDCロール)のIAMポリシーに、`wafv2:*`関連の権限(Web ACL作成・マネージドルールグループの追加・`AssociateWebACL`)を追加する必要がある。これも「stateアクセスとIAM権限は別軸で絞る」という既存の方針([[cicd-access-design-deferred]]参照)に沿って対応する
+- CI/CD(WAFレイヤー用OIDCロール)のIAMポリシーに、`wafv2:*`関連の権限(Web ACL作成・マネージドルールグループの追加・`AssociateWebACL`)を追加する必要がある。これも「stateアクセスとIAM権限は別軸で絞る」という既存の方針に沿って対応する
 
 ### AWS Well-Architected Framework 6本柱
 
@@ -108,7 +108,7 @@ Web ACL 3個(CloudFront/User Pool B/User Pool C)の実装・関連付け・ロ�
 
 このセッション最大の出来事は、**設計レビュー通過後の実装フェーズで、設計の前提自体が誤っていたことが発覚した**ことです。User Pool CにATPを付与する設計は設計レビューでは合格としていましたが、実際に`apply`したところ「ATPを含むWeb ACLはCognito User Poolに関連付けられない」というAWS公式の制約に阻まれ、Cognito自身のThreat Protection(Plus tier)への置き換えという設計差し戻しが発生しました。設計レビューの時点でこの制約(AWS公式ドキュメントの一次情報)まで確認しきれていなかったのはレビュー側(Claude)の見落としでもあり、次回以降「新しいAWS機能を採用する際は、対象リソースとの組み合わせ制約を一次情報で確認してから設計レビューを通す」という教訓として残します。
 
-もう一つの出来事は、WAFとは直接関係のない**ALBの片方AZでのENI欠落インシデント**です。原因の切り分け(WAFログでALLOWを確認、SSMトンネル経由でALB→Cognito認証フローが正常に動くことを直接確認、`-replace`でのALB再作成を試行)を通じて、WAF自体の実装には問題が無いこと、AWS側のプラットフォーム的な不整合であることを筋道立てて特定できました。`.claude/DESIGN_NOTES.md`に診断手順ごと記録済みです。
+もう一つの出来事は、WAFとは直接関係のない**ALBの片方AZでのENI欠落インシデント**です。原因の切り分け(WAFログでALLOWを確認、SSMトンネル経由でALB→Cognito認証フローが正常に動くことを直接確認、`-replace`でのALB再作成を試行)を通じて、WAF自体の実装には問題が無いこと、AWS側のプラットフォーム的な不整合であることを筋道立てて特定できました。診断手順ごと記録済みです。
 
 ## 観点別レビュー
 
@@ -129,7 +129,7 @@ Web ACL 3個(CloudFront/User Pool B/User Pool C)の実装・関連付け・ロ�
 ### 運用性
 
 - WAFログの実装(`aws_wafv2_web_acl_logging_configuration`、us-east-1 provider要件込み)が完了し、実際にログが出力されることを確認できた
-- ALBのAZ欠落インシデントの調査で、`describe-network-interfaces`によるENI確認、`set-subnets`による強制変更、リソースの`-replace`という段階的な切り分け手順を実践できた。この手順は`DESIGN_NOTES.md`に記録し、次回以降再利用可能にした
+- ALBのAZ欠落インシデントの調査で、`describe-network-interfaces`によるENI確認、`set-subnets`による強制変更、リソースの`-replace`という段階的な切り分け手順を実践できた。この手順は記録し、次回以降再利用可能にした
 - SSMトンネル検証で使った一時EC2・IAMロール・インスタンスプロファイルは、検証後に漏れなく削除できている(Terraform管理外のリソースの後片付けとして重要な習慣)
 
 ### 保守性
@@ -147,7 +147,7 @@ Web ACL 3個(CloudFront/User Pool B/User Pool C)の実装・関連付け・ロ�
 ### Terraform化した場合の改善点
 
 - `AWSManagedRulesAntiDDoSRuleSet`は`managed_rule_group_configs`(`managed_rule_group_statement`の内側)が必須、かつ`challenge`機能を`ENABLED`にする場合は`exempt_uri_regular_expression`が必須という、ドキュメントだけでは気づきにくい詳細仕様があった。`terraform plan`ではなく実際の`apply`(AWS API側のバリデーション)で初めて発覚するパターンだったため、今後同様の新しいマネージドルールグループを使う際は、AWS providerの一次情報(GitHub上のマークダウン)を先に確認する習慣が有効
-- CLOUDFRONTスコープのリソースは、Web ACL本体だけでなく、ロググループ・ロギングconfigにも`provider = aws.us_east_1`が必要という点は、忘れやすい典型パターンとして`DESIGN_NOTES.md`に記録済み
+- CLOUDFRONTスコープのリソースは、Web ACL本体だけでなく、ロググループ・ロギングconfigにも`provider = aws.us_east_1`が必要という点は、忘れやすい典型パターンとして記録済み
 
 ### AWS Well-Architected Framework 6本柱
 

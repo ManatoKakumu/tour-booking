@@ -137,7 +137,7 @@
 
 ### 運用性
 
-- DBユーザー作成(GRANT)をCI/CD側に切り出す判断と、その経緯が`.claude/DESIGN_NOTES.md`に橋渡しメモとして記録されており、セッションをまたいでも追跡できる状態になっている
+- DBユーザー作成(GRANT)をCI/CD側に切り出す判断と、その経緯が記録されており、セッションをまたいでも追跡できる状態になっている
 
 ### 保守性
 
@@ -189,7 +189,7 @@
 - [x] `database.md`のコスト見積もりに、マスターユーザー用シークレット(5個目)分を追加する
 - [x] `deletion_protection`・`backup_retention_period`の決定内容と理由を`database.md`のセキュリティ設計・可用性設計に反映する(前回からの持ち越し)
 - [x] 実際に`terraform apply`して動作確認するかどうかを判断する。`apply`する場合は、確認後に必ず`terraform destroy`する(コストガードレール通り)
-- [ ] CI/CD側(新チャット2)でのDBユーザー作成タスクとの接続(Secrets Manager ARNの受け渡し方法など)は、このレイヤーの範囲外のためCI/CD側の設計時に詰める(`.claude/DESIGN_NOTES.md`に橋渡しメモ記録済み)
+- [ ] CI/CD側(新チャット2)でのDBユーザー作成タスクとの接続(Secrets Manager ARNの受け渡し方法など)は、このレイヤーの範囲外のためCI/CD側の設計時に詰める
 
 ## 2026-08-18 apply/destroy確認・マージ準備
 
