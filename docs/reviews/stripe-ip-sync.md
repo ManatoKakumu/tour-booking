@@ -181,7 +181,7 @@ tfstateの配置(ADR-002)では、一度「変更頻度が低いから既存のs
 
 ## 曖昧なこと
 
-- AWS Network Firewall(FQDNベースのフィルタリング)への移行は、`.claude/DESIGN_NOTES.md`に持ち越し事項として記録済みだが、`stripe-ip-sync.md`本文にはまだ反映されていない
+- AWS Network Firewall(FQDNベースのフィルタリング)への移行は、持ち越し事項として記録済みだが、`stripe-ip-sync.md`本文にはまだ反映されていない
 
 ## 理解できていないこと
 
