@@ -12,10 +12,10 @@ Step2〜8の全体構成図は[overall.drawio.png](overall.drawio.png)を参照�
 
 | サービス | 状態 | ドキュメント |
 |---|---|---|
-| ネットワーク | 構築中 | [network.md](network.md) |
-| セキュリティグループ | 構築中 | [security-group.md](security-group.md) |
-| ALB | 構築中 | [alb.md](alb.md) |
-| Cognito | 構築中 | [cognito.md](cognito.md) |
+| ネットワーク | 完了 | [network.md](network.md) |
+| セキュリティグループ | 完了 | [security-group.md](security-group.md) |
+| ALB | 完了 | [alb.md](alb.md) |
+| Cognito | 完了 | [cognito.md](cognito.md) |
 | データベース | 完了 | [database.md](database.md) |
 | CI/CD | 完了 | [ci-cd.md](ci-cd.md) |
 | コンピュート | 完了 | [compute.md](compute.md) |

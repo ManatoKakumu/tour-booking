@@ -205,3 +205,16 @@
 ### 判定
 
 上記2点を反映した状態で、引き続き実装完了・合格判定を維持する。
+
+## 2026-09-06 保留事項の棚卸し
+
+2026-08-15実装レビューの「次のアクション」で保留にしていた4項目について、その後の各レイヤー構築で解消済みであることを確認した。
+
+- Cognito App Clientシークレットの保管方法: `infra/network-sg-alb/cognito.tf`でSecrets Manager(`aws_secretsmanager_secret`/`aws_secretsmanager_secret_version`)に格納済み
+- ALBのHTTPSリスナー・リスナールール: `infra/network-sg-alb/alb.tf`に、パスパターンの具体性順(`/b/api/*`→`/b/*`→`/c/mypage(booking)/api/*`→`/c/mypage(booking)/*`→`/api/*`)で優先度を設定した`authenticate-cognito`アクション付きリスナールールを実装済み
+- ALB用SGのCloudFront Inboundルール: `infra/network-sg-alb/security_group.tf`で、CloudFrontが自動生成するサービス管理型SG(`CloudFront-VPCOrigins-Service-SG`)を参照する形で実装済み
+- S3向けGateway型VPCエンドポイントの画像用バケット限定ポリシー: `infra/network-sg-alb/vpc_endpoint.tf`で、画像用バケットARN配下への限定ポリシーを実装済み
+
+上記4項目の解消および下流レイヤー(CloudFront・Route53・ACM・S3・WAF・Stripe IP同期)がすべて完了済みであることを踏まえ、`docs/architecture/README.md`のネットワーク・セキュリティグループ・ALB・Cognitoの状態を「構築中」から「完了」に更新した。
+
+一方、リージョン文字列`"ap-northeast-1"`のハードコード解消は引き続き未対応(任意・低優先度のまま、他レイヤーにも同様のハードコードが残っている)。
