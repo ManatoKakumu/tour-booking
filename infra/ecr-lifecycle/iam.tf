@@ -12,7 +12,7 @@ resource "aws_iam_role" "ecr_tagging_lambda" {
         Action    = "sts:AssumeRole"
         Condition = {
           StringEquals = {
-            "aws:SourceArn" = "arn:aws:lambda:ap-northeast-1:${data.aws_caller_identity.current.account_id}:function:ecr-tagging"
+            "aws:SourceArn" = "arn:aws:lambda:${var.default_region}:${data.aws_caller_identity.current.account_id}:function:ecr-tagging"
           }
         }
       }

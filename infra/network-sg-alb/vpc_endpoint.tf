@@ -1,6 +1,6 @@
 resource "aws_vpc_endpoint" "ecr_api" {
   vpc_id              = aws_vpc.main.id
-  service_name        = "com.amazonaws.ap-northeast-1.ecr.api"
+  service_name        = "com.amazonaws.${var.default_region}.ecr.api"
   vpc_endpoint_type   = "Interface"
   subnet_ids          = [for s in aws_subnet.ecs_api : s.id]
   security_group_ids  = [aws_security_group.vpc_endpoint.id]
@@ -13,7 +13,7 @@ resource "aws_vpc_endpoint" "ecr_api" {
 
 resource "aws_vpc_endpoint" "ecr_dkr" {
   vpc_id              = aws_vpc.main.id
-  service_name        = "com.amazonaws.ap-northeast-1.ecr.dkr"
+  service_name        = "com.amazonaws.${var.default_region}.ecr.dkr"
   vpc_endpoint_type   = "Interface"
   subnet_ids          = [for s in aws_subnet.ecs_api : s.id]
   security_group_ids  = [aws_security_group.vpc_endpoint.id]
@@ -26,7 +26,7 @@ resource "aws_vpc_endpoint" "ecr_dkr" {
 
 resource "aws_vpc_endpoint" "logs" {
   vpc_id              = aws_vpc.main.id
-  service_name        = "com.amazonaws.ap-northeast-1.logs"
+  service_name        = "com.amazonaws.${var.default_region}.logs"
   vpc_endpoint_type   = "Interface"
   subnet_ids          = [for s in aws_subnet.ecs_api : s.id]
   security_group_ids  = [aws_security_group.vpc_endpoint.id]
@@ -39,7 +39,7 @@ resource "aws_vpc_endpoint" "logs" {
 
 resource "aws_vpc_endpoint" "secretsmanager" {
   vpc_id              = aws_vpc.main.id
-  service_name        = "com.amazonaws.ap-northeast-1.secretsmanager"
+  service_name        = "com.amazonaws.${var.default_region}.secretsmanager"
   vpc_endpoint_type   = "Interface"
   subnet_ids          = [for s in aws_subnet.ecs_api : s.id]
   security_group_ids  = [aws_security_group.vpc_endpoint.id]
@@ -52,7 +52,7 @@ resource "aws_vpc_endpoint" "secretsmanager" {
 
 resource "aws_vpc_endpoint" "s3" {
   vpc_id            = aws_vpc.main.id
-  service_name      = "com.amazonaws.ap-northeast-1.s3"
+  service_name      = "com.amazonaws.${var.default_region}.s3"
   vpc_endpoint_type = "Gateway"
   route_table_ids   = [aws_route_table.api.id, aws_route_table.front.id]
   policy            = data.aws_iam_policy_document.s3_endpoint.json
@@ -66,7 +66,7 @@ data "aws_iam_policy_document" "s3_endpoint" {
   statement {
     effect    = "Allow"
     actions   = ["s3:GetObject"]
-    resources = ["arn:aws:s3:::prod-ap-northeast-1-starport-layer-bucket/*"]
+    resources = ["arn:aws:s3:::prod-${var.default_region}-starport-layer-bucket/*"]
     principals {
       type        = "*"
       identifiers = ["*"]

@@ -7,7 +7,7 @@ data "terraform_remote_state" "network_sg_alb" {
   config = {
     bucket = var.tfstate_bucket
     key    = "network-sg-alb/terraform.tfstate"
-    region = "ap-northeast-1"
+    region = var.default_region
   }
 }
 
@@ -16,7 +16,7 @@ data "terraform_remote_state" "database" {
   config = {
     bucket = var.tfstate_bucket
     key    = "database/terraform.tfstate"
-    region = "ap-northeast-1"
+    region = var.default_region
   }
 }
 
@@ -25,6 +25,6 @@ data "terraform_remote_state" "cloudfront_s3" {
   config = {
     bucket = var.tfstate_bucket
     key    = "cloudfront-s3/terraform.tfstate"
-    region = "ap-northeast-1"
+    region = var.default_region
   }
 }
