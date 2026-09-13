@@ -147,7 +147,7 @@ resource "aws_vpc_security_group_egress_rule" "ecs_api_to_vpc_endpoint" {
 
 # ECS api → S3 Gateway (ECS api側のOutbound)
 data "aws_prefix_list" "s3" {
-  name = "com.amazonaws.ap-northeast-1.s3"
+  name = "com.amazonaws.${var.default_region}.s3"
 }
 
 resource "aws_vpc_security_group_egress_rule" "ecs_api_to_s3" {

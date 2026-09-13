@@ -12,7 +12,7 @@ resource "aws_iam_role" "stripe_ip_lambda" {
         Action    = "sts:AssumeRole"
         Condition = {
           StringEquals = {
-            "aws:SourceArn" = "arn:aws:lambda:ap-northeast-1:${data.aws_caller_identity.current.account_id}:function:stripe-ip"
+            "aws:SourceArn" = "arn:aws:lambda:${var.default_region}:${data.aws_caller_identity.current.account_id}:function:stripe-ip"
           }
         }
       }

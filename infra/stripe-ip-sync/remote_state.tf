@@ -7,6 +7,6 @@ data "terraform_remote_state" "network_sg_alb" {
   config = {
     bucket = var.tfstate_bucket
     key    = "network-sg-alb/terraform.tfstate"
-    region = "ap-northeast-1"
+    region = var.default_region
   }
 }

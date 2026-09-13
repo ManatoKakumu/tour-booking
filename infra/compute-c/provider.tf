@@ -1,3 +1,7 @@
+variable "default_region" {
+  type = string
+}
+
 terraform {
   required_version = ">= 1.10"
   required_providers {
@@ -9,5 +13,5 @@ terraform {
 }
 
 provider "aws" {
-  region = "ap-northeast-1"
+  region = var.default_region
 }

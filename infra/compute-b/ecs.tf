@@ -58,7 +58,7 @@ resource "aws_ecs_task_definition" "this" {
         logDriver = "awslogs"
         options = {
           "awslogs-group"         = each.value.log_group_name
-          "awslogs-region"        = "ap-northeast-1"
+          "awslogs-region"        = var.default_region
           "awslogs-stream-prefix" = each.key
         }
       }
@@ -163,7 +163,7 @@ resource "aws_ecs_task_definition" "db_user_setup_b" {
         logDriver = "awslogs"
         options = {
           "awslogs-group"         = aws_cloudwatch_log_group.api_b.name
-          "awslogs-region"        = "ap-northeast-1"
+          "awslogs-region"        = var.default_region
           "awslogs-stream-prefix" = "db-user-setup-b"
         }
       }

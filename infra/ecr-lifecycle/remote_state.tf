@@ -7,7 +7,7 @@ data "terraform_remote_state" "compute_b" {
   config = {
     bucket = var.tfstate_bucket
     key    = "compute-b/terraform.tfstate"
-    region = "ap-northeast-1"
+    region = var.default_region
   }
 }
 
@@ -16,6 +16,6 @@ data "terraform_remote_state" "compute_c" {
   config = {
     bucket = var.tfstate_bucket
     key    = "compute-c/terraform.tfstate"
-    region = "ap-northeast-1"
+    region = var.default_region
   }
 }

@@ -7,7 +7,7 @@ data "terraform_remote_state" "route53_acm" {
   config = {
     bucket = var.tfstate_bucket
     key    = "route53-acm/terraform.tfstate"
-    region = "ap-northeast-1"
+    region = var.default_region
   }
 }
 
@@ -16,6 +16,6 @@ data "terraform_remote_state" "cloudfront_s3" {
   config = {
     bucket = var.tfstate_bucket
     key    = "cloudfront-s3/terraform.tfstate"
-    region = "ap-northeast-1"
+    region = var.default_region
   }
 }
