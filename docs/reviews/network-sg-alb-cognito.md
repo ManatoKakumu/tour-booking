@@ -218,3 +218,28 @@
 上記4項目の解消および下流レイヤー(CloudFront・Route53・ACM・S3・WAF・Stripe IP同期)がすべて完了済みであることを踏まえ、`docs/architecture/README.md`のネットワーク・セキュリティグループ・ALB・Cognitoの状態を「構築中」から「完了」に更新した。
 
 一方、リージョン文字列`"ap-northeast-1"`のハードコード解消は引き続き未対応(任意・低優先度のまま、他レイヤーにも同様のハードコードが残っている)。
+
+## 2026-09-13 リージョン文字列のハードコード解消
+
+178行目「曖昧なこと」・187行目「次のアクション」に記載していた、リージョン文字列のハードコード解消(任意・低優先度)に対応した。
+
+### 対応内容
+
+各state(`waf`・`route53-acm`・`network-sg-alb`・`cloudfront-s3`・`ecr-lifecycle`・`stripe-ip-sync`・`database`・`compute-b`・`compute-c`・`cost-management`の10ディレクトリ)の`provider.tf`に`variable "default_region"`(デフォルト値なし)を追加し、値は`terraform.tfvars`(Git管理外、既存の`tfstate_bucket`と同じ形)から供給する形に統一した。以下の参照箇所もすべて`var.default_region`経由に置き換えた。
+
+- `remote_state.tf`の`terraform_remote_state`データソースの`region`
+- `compute-b`/`compute-c`の`ecs.tf`の`awslogs-region`
+- `network-sg-alb`の`vpc_endpoint.tf`(VPCエンドポイントのservice name)・`security_group.tf`(S3向けprefix list名)
+- `network-sg-alb`の`subnet.tf`(AZ名)。`variable`の`default`値は他の変数を参照できない制約のため、4つのサブネットマッピングは`variable`から`locals`に変更した
+- `ecr-lifecycle`・`stripe-ip-sync`の`iam.tf`(Lambda信頼ポリシーのARN)
+- GitHub Actions workflow(`front-b`/`front-c`/`api-b`/`api-c`)の`aws-region`。リポジトリのActions Variable `AWS_REGION`を新設して参照する形にした
+
+WAF/ACMの`us_east_1`エイリアスプロバイダは、AWS側の技術的制約(CloudFront用証明書・WAFがus-east-1固定)によるものであり保守性の問題ではないため、意図的にハードコードのまま維持している。
+
+### 確認結果
+
+全10stateで`terraform validate`成功を確認した。`terraform plan`も実行したが、確認時点でAWS上にリソースが存在しない(destroy済み)状態だったため、既存リソースとの実差分は確認できなかった。ただし置き換え後の値(`var.default_region`の実体)は置き換え前のリテラル値と文字列として完全に同一であり、`for_each`のキー等の識別子も変わらないため、既存リソースに対する意図しない`destroy`/再作成は発生しない設計であることをコードレベルで確認した。
+
+### 判定
+
+`fix/20260913/region`ブランチ、PR #36でmainにマージ済み。178行目・187行目の該当項目は解消済み。
