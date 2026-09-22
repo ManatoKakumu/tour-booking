@@ -1,7 +1,13 @@
 resource "aws_cognito_user_pool" "b" {
   name = "tour-booking-b"
 
+  user_pool_tier = "PLUS"
+
   mfa_configuration = "ON"
+
+  user_pool_add_ons {
+    advanced_security_mode = "ENFORCED"
+  }
 
   software_token_mfa_configuration {
     enabled = true
@@ -86,6 +92,30 @@ resource "aws_cognito_risk_configuration" "c" {
   compromised_credentials_risk_configuration {
     actions {
       event_action = "BLOCK"
+    }
+  }
+}
+
+resource "aws_cognito_log_delivery_configuration" "b" {
+  user_pool_id = aws_cognito_user_pool.b.id
+
+  log_configurations {
+    event_source = "userAuthEvents"
+    log_level    = "INFO"
+    cloud_watch_logs_configuration {
+      log_group_arn = aws_cloudwatch_log_group.cognito_auth_events_b.arn
+    }
+  }
+}
+
+resource "aws_cognito_log_delivery_configuration" "c" {
+  user_pool_id = aws_cognito_user_pool.c.id
+
+  log_configurations {
+    event_source = "userAuthEvents"
+    log_level    = "INFO"
+    cloud_watch_logs_configuration {
+      log_group_arn = aws_cloudwatch_log_group.cognito_auth_events_c.arn
     }
   }
 }
