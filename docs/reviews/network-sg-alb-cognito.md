@@ -338,3 +338,103 @@ WAF/ACMの`us_east_1`エイリアスプロバイダは、AWS側の技術的制�
 - [ ] 適応認証(`account_takeover_risk_configuration`)と漏洩認証情報検知の組み合わせ動作を、実装前に一次情報で確認する
 - [ ] 検知後の対応手順(`AdminDisableUser`等の使い分け)の整理
 - [ ] `docs/architecture/README.md`の状態更新(実装完了後)
+
+## 2026-09-23 実装レビュー(ログイン失敗検知)
+
+## レビュー対象
+
+- 対象: `infra/network-sg-alb/cognito.tf`(Plus tire化・ログ配信・`account_takeover_risk_configuration`)・`cloudwatch.tf`(ロググループ・Contributor Insightsルール・Alarm4種)・`sns.tf`(通知経路)
+- 対応Step: ロードマップ外、メンターFB対応
+- レビュー日: 2026-09-23
+
+## 総評
+
+設計通りの範囲は全て実装され、アカウント単位検知・全体失敗率検知いずれもB・C双方で実機確認(ALARM遷移・SNS通知受信)まで完了しました。実装中に、設計段階では想定していなかった複数の技術的制約(後述)を発見・修正できており、特に「架空のユーザー名への試行はCognitoの認証イベントとして記録されない」という発見は、当初のテスト計画(多数の架空ユーザー名でクレデンシャルスタッフィングを再現する案)そのものを覆す、設計上も重要な学びでした。
+
+最終確認の段階で、設計ドキュメント(`cognito.md`)に記載していた「適応認証を有効にする」が実装リストから漏れていたことが発覚し、追加で実装しました。設計文書の記述が実装計画より先走っていた、という反省点として記録します。実装レビューとしては合格とし、`terraform destroy`・コミット・PR作成に進んで問題ありません。
+
+## 観点別レビュー
+
+### 設計
+
+- Plus tire化・`userAuthEvents`ログ配信・Contributor Insights(アカウント単位)・Metric Math(全体失敗率)・SNS通知、設計時に洗い出した実装項目は全て完了した
+- **発見**: 架空の(サインアップしていない)ユーザー名へのログイン試行は、`userAuthEvents`に一切記録されないことが実機確認で判明した。これは当初想定していなかった仕様で、クレデンシャルスタッフィングの実機テスト方法を、実在するテストアカウント複数個を使う方式に変更する必要があった。実際の攻撃でも同じ限界(存在しないアカウントを狙った試行は検知できない)があることを意味し、`cognito.md`への反映を次のアクションに残す
+- **反省**: `cognito.md`のセキュリティ設計に書いていた「Cognitoの適応認証を有効にする」が、実装リストの5項目には最初から「検討中・未確定」として計上されており、そのまま着手されずに終盤まで見過ごされていた。設計ドキュメントの記述(断定的)と実装計画の記述(未確定)がズレていたことが原因
+
+### セキュリティ
+
+- アカウント単位のAlarm(`signin-failure-by-user-b/-c`)・全体失敗率のAlarm(`signin-failure-rate-b/-c`)、いずれも実際にOK→ALARM遷移とSNS通知受信を確認済み
+- `account_takeover_risk_configuration`(High=BLOCK)は、`describe-risk-configuration`でのデプロイ内容確認までは完了。実際のBLOCK発動は、意図的に高リスクと判定させる手段が無いため未検証のまま
+- ユーザーへの直接通知(Cognito `Notify`機能)はSES未導入のため見送り、運営への手動通知で代替する判断とその理由(パスワードが運営に知られるリスクの回避、SESという新規サービス導入のスコープ超過)を`cognito.md`に明記できている
+
+### 可用性
+
+- 特筆すべき懸念はない
+
+### 運用性
+
+- Alarmの評価タイミングに、体感で分〜十分程度のばらつきがあった(Contributor Insightsのデータが後から遡って補正される挙動を実機で確認)。運用時にアラーム遅延として認識しておく必要がある
+
+### 保守性
+
+- 実装中に発見・修正した誤りが多数あった(下記「Terraform化した場合の改善点」に集約)。いずれも`terraform validate`/`apply`のエラーメッセージ、または実際のAWS上の値の突合を通じて発見できており、確認プロセス自体は機能していた
+
+### コスト
+
+- 追加コストの見積もり(Contributor Insights: 月$0.5、Plus tire: 既存の見積もり通り)は設計時点のまま変更なし
+
+### パフォーマンス
+
+- 特筆すべき懸念はない
+
+### Terraform化した場合の改善点
+
+今回発生した実装ミスの多くは、初めて扱うリソース固有のスキーマ誤認によるものだった。
+
+- `aws_cognito_log_delivery_configuration`: ブロック名は単数形`log_configuration`ではなく複数形`log_configurations`が正しい
+- `aws_cloudwatch_metric_alarm`(`metric_query`が複数あり、うち1つがexpression専用の場合): そのクエリに`period`の明記が必要(他のクエリから期間を推測できないため)
+- `aws_cloudwatch_metric_alarm`の`treat_missing_data`: `metric_query`ブロックの中ではなく、リソース直下の属性
+- `SignInSuccesses`メトリクス: `UserPool`だけでなく`UserPoolClient`も同時に指定しないとデータを取得できない(公式ドキュメントに明記があったが見落とした)
+- C側の`dimensions`に、コピペミスでB側の`UserPoolClient`を参照していた箇所があった
+- `aws_cognito_user_pool_client`: `supported_identity_providers = ["COGNITO"]`が無いとHosted UIのログイン画面自体が機能しない
+- Managed Login(`ManagedLoginVersion: 1`のドメイン)は、`aws_cognito_managed_login_branding`(`use_cognito_provided_values = true`で最低限可)が無いとログイン画面がエラーになる
+- `account_takeover_risk_configuration`の`low_action`/`medium_action`/`high_action`は、`event_action`に加えて`notify`(真偽値)も必須
+
+いずれも初見では気づきにくい仕様で、次回同様のリソースを扱う際の参考情報として価値が高い
+
+### AWS Well-Architected Framework 6本柱
+
+- 運用上の優秀性: 実装中に発見した複数の制約・回避策が、このレビュー記録に集約されており、再現可能な形で残っている
+- セキュリティ: 検知経路は実機で動作確認済み。適応認証のBLOCK動作、ユーザーへの直接通知は、それぞれ検証手段の欠如・スコープ判断により未実装/未検証のまま持ち越し
+- 信頼性: 影響なし
+- パフォーマンス効率: 影響なし
+- コスト最適化: 設計時点の見積もりを維持
+- 持続可能性: 特筆すべき言及はない
+
+### 実務ならどう設計するか
+
+- 「架空アカウントへの攻撃は検知できない」という今回の発見は、実務であれば重大な指摘事項になる。対策としては、存在確認自体を別の手段(例: WAFのボット対策、レートリミット)で補完する、あるいはこの限界を前提として許容し文書化する、といった選択肢がある
+- 設計ドキュメントと実装計画がズレた今回の反省は、実務であれば「設計ドキュメントの記述は、対応する実装チケット/タスクとひもづけて管理する」といった運用でも防げる種類の問題
+
+## 理解できていること
+
+- `userAuthEvents`→Contributor Insights→CloudWatch Alarm→SNSという、一連の検知パイプラインの構成要素とそれぞれの必須設定
+- `SignInSuccesses`メトリクスの正しいディメンション指定
+- Cognito Managed Loginの必須要件(ブランディング・identity provider)
+
+## 曖昧なこと
+
+- 適応認証(`account_takeover_risk_configuration`)と漏洩認証情報検知(C側)を同時に有効にした場合の優先順位・組み合わせ動作(一次情報でも確証を得られず)
+- Contributor Insightsのデータ反映タイミング(後から遡って補正される挙動)の正確な仕様
+
+## 理解できていないこと
+
+- 特になし
+
+## 次のアクション
+
+- [ ] 架空のユーザー名への攻撃はCognitoの認証イベントとして記録されない、という制約を`cognito.md`の要件・前提またはセキュリティ設計に明記するか検討する
+- [ ] 適応認証の実際のBLOCK動作、および漏洩認証情報検知との組み合わせ動作の検証(現時点では検証手段が無く保留)
+- [ ] SES導入によるユーザーへの直接通知の実装(見送り中、将来の改善候補として`cognito.md`に記録済み)
+- [ ] `terraform destroy`の実施
+- [ ] 変更のコミット・PR作成

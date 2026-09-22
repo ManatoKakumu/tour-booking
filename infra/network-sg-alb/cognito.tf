@@ -41,6 +41,7 @@ resource "aws_cognito_user_pool_client" "b" {
   allowed_oauth_flows_user_pool_client = true
   allowed_oauth_flows                  = ["code"]
   allowed_oauth_scopes                 = ["openid"]
+  supported_identity_providers         = ["COGNITO"]
 
   callback_urls = ["https://sample-sample.jp/oauth2/idpresponse"]
 }
@@ -54,6 +55,7 @@ resource "aws_cognito_user_pool_client" "c" {
   allowed_oauth_flows_user_pool_client = true
   allowed_oauth_flows                  = ["code"]
   allowed_oauth_scopes                 = ["openid"]
+  supported_identity_providers         = ["COGNITO"]
 
   callback_urls = ["https://sample-sample.jp/oauth2/idpresponse"]
 }
@@ -86,12 +88,50 @@ resource "aws_secretsmanager_secret_version" "cognito_client_secret_c" {
   secret_string = aws_cognito_user_pool_client.c.client_secret
 }
 
+resource "aws_cognito_risk_configuration" "b" {
+  user_pool_id = aws_cognito_user_pool.b.id
+
+  account_takeover_risk_configuration {
+    actions {
+      low_action {
+        event_action = "NO_ACTION"
+        notify       = false
+      }
+      medium_action {
+        event_action = "NO_ACTION"
+        notify       = false
+      }
+      high_action {
+        event_action = "BLOCK"
+        notify       = false
+      }
+    }
+  }
+}
+
 resource "aws_cognito_risk_configuration" "c" {
   user_pool_id = aws_cognito_user_pool.c.id
 
   compromised_credentials_risk_configuration {
     actions {
       event_action = "BLOCK"
+    }
+  }
+
+  account_takeover_risk_configuration {
+    actions {
+      low_action {
+        event_action = "NO_ACTION"
+        notify       = false
+      }
+      medium_action {
+        event_action = "NO_ACTION"
+        notify       = false
+      }
+      high_action {
+        event_action = "BLOCK"
+        notify       = false
+      }
     }
   }
 }
@@ -118,4 +158,16 @@ resource "aws_cognito_log_delivery_configuration" "c" {
       log_group_arn = aws_cloudwatch_log_group.cognito_auth_events_c.arn
     }
   }
+}
+
+resource "aws_cognito_managed_login_branding" "b" {
+  client_id                   = aws_cognito_user_pool_client.b.id
+  user_pool_id                = aws_cognito_user_pool.b.id
+  use_cognito_provided_values = true
+}
+
+resource "aws_cognito_managed_login_branding" "c" {
+  client_id                   = aws_cognito_user_pool_client.c.id
+  user_pool_id                = aws_cognito_user_pool.c.id
+  use_cognito_provided_values = true
 }

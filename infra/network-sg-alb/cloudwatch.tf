@@ -30,9 +30,11 @@ resource "aws_cloudwatch_metric_alarm" "signin_failure_by_user_b" {
   comparison_operator = "GreaterThanThreshold"
   threshold           = 10
   evaluation_periods  = 1
+  treat_missing_data  = "notBreaching"
 
   metric_query {
     id          = "max_failure"
+    period      = 300
     expression  = "INSIGHT_RULE_METRIC(\"${aws_cloudwatch_contributor_insight_rule.signin_failure_by_user_b.rule_name}\", \"MaxContributorValue\")"
     label       = "Max SignIn Failures by a single user (B)"
     return_data = true
@@ -65,9 +67,11 @@ resource "aws_cloudwatch_metric_alarm" "signin_failure_by_user_c" {
   comparison_operator = "GreaterThanThreshold"
   threshold           = 10
   evaluation_periods  = 1
+  treat_missing_data  = "notBreaching"
 
   metric_query {
     id          = "max_failure"
+    period      = 300
     expression  = "INSIGHT_RULE_METRIC(\"${aws_cloudwatch_contributor_insight_rule.signin_failure_by_user_c.rule_name}\", \"MaxContributorValue\")"
     label       = "Max SignIn Failures by a single user (C)"
     return_data = true
@@ -98,7 +102,8 @@ resource "aws_cloudwatch_metric_alarm" "signin_failure_rate_b" {
       period      = 300
       stat        = "SampleCount"
       dimensions = {
-        UserPool = aws_cognito_user_pool.b.id
+        UserPool       = aws_cognito_user_pool.b.id
+        UserPoolClient = aws_cognito_user_pool_client.b.id
       }
     }
   }
@@ -111,7 +116,8 @@ resource "aws_cloudwatch_metric_alarm" "signin_failure_rate_b" {
       period      = 300
       stat        = "Sum"
       dimensions = {
-        UserPool = aws_cognito_user_pool.b.id
+        UserPool       = aws_cognito_user_pool.b.id
+        UserPoolClient = aws_cognito_user_pool_client.b.id
       }
     }
   }
@@ -141,7 +147,8 @@ resource "aws_cloudwatch_metric_alarm" "signin_failure_rate_c" {
       period      = 300
       stat        = "SampleCount"
       dimensions = {
-        UserPool = aws_cognito_user_pool.c.id
+        UserPool       = aws_cognito_user_pool.c.id
+        UserPoolClient = aws_cognito_user_pool_client.c.id
       }
     }
   }
@@ -154,7 +161,8 @@ resource "aws_cloudwatch_metric_alarm" "signin_failure_rate_c" {
       period      = 300
       stat        = "Sum"
       dimensions = {
-        UserPool = aws_cognito_user_pool.c.id
+        UserPool       = aws_cognito_user_pool.c.id
+        UserPoolClient = aws_cognito_user_pool_client.c.id
       }
     }
   }
