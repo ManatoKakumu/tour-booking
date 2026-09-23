@@ -19,9 +19,14 @@
   - ECSへのデプロイが行われた際に必要な処理なので、イベント駆動型が適しており、EventBridgeを使えばいいと判断
   - 実際のタグ付与処理に関しては、特にOSなどを管理する必要がない、かつ常時稼働させるべきものでもなくコストを抑えたい、という観点から、Lambdaと判断した
 - ECSへのデプロイ成功可否には、ECSのデプロイサーキットブレーカーを使う。これをEventBridgeが受け取り、Lambdaを起動させる
+- Lambdaは4つに分割し、front-b/api-b/front-c/api-cで4つに分割する。それに伴い、IAMロールも4つに分割する
+  - 仮にLambdaが侵害された際に、Lambdaが一つ、かつECRリポジトリ4つへのタグ書き込み等の権限を持っていた場合、4つのリポジトリが影響を受ける可能性がある。
+  - なので、それぞれ分割することで、仮に侵害されても被害を最小限に抑えるために4つに分割する
+  - DBユーザーはAPIのみがDBに直接アクセスするため実質2種類(B用・C用)に分かれたが、ECRリポジトリ・ECSサービスはfront-b/api-b/front-c/api-cの4つがそれぞれ独立してデプロイされるため、CI/CD用OIDCロールと同じ基準(独立して動く主体の数)に合わせて4分割とした。B/C単位の2分割では、同じB側内のfront-bとapi-bが互いの侵害範囲に入ってしまう
 
 ### 通信経路
 - ECS(デプロイサーキットブレーカー) → EventBridge → Lambda → ECR
+  - この経路は、front-b/api-b/front-c/api-c、4つ同じものが存在する
 
 ### セキュリティ設計
 - 必要最小限の権限を付与する
@@ -29,21 +34,24 @@
 #### IAMロール
 - EventBridge
   - `lambda:InvokeFunction` を特定のLambdaのARN指定で絞る。Lambda起動に必要
+  - Lambda関数は4つあるので、ルールを4つ生成する。 `resources` フィールドにどのECSからのイベント化がわかるので、それを用いて起動するLambdaを識別する
 - Lambda
-  - `ecs:ListServiceDeployments`, `ecs:DescribeServiceDeployments`, `ecs:DescribeServiceRevisions`, `ecs:DescribeServices` を特定のECSサービス(4種類)のARN指定で絞る。ECSデプロイサーキットブレーカーからデプロイ成功可否の情報を得るために付与
-  - `ecr:PutImage`, `ecr:BatchGetImage`, `ecr:DescribeImages`, `ecr:BatchDeleteImage` を特定のECRリポジトリ(4種類)のARN指定で絞る。ECRイメージのタグ付与・削除に必要
-  - `ecs:DescribeTaskDefinition` をResourceは*で付与
+  - front-b/api-b/front-c/api-c用に4つ作成する
+  - `ecs:ListServiceDeployments`, `ecs:DescribeServiceDeployments`, `ecs:DescribeServiceRevisions`, `ecs:DescribeServices` を特定のECSサービス(front-b/api-b/front-c/api-cいずれか)のARN指定で絞る。ECSデプロイサーキットブレーカーからデプロイ成功可否の情報を得るために付与
+  - `ecr:PutImage`, `ecr:BatchGetImage`, `ecr:DescribeImages`, `ecr:BatchDeleteImage` を特定のECRリポジトリ(front-b/api-b/front-c/api-cいずれか)のARN指定で絞る。ECRイメージのタグ付与・削除に必要
+  - `ecs:DescribeTaskDefinition` をResourceは特定のECSタスク定義(family名がサービス名と一致、リビジョンはワイルドカード)のARNで付与
   - `sns:Publish` を、Lambdaが処理失敗時にSNSトピックに配信できるよう、特定のARNに絞って付与する
   - Lambdaが呼び出されるよう、特定のEventBridgeのARN指定でPrincipalを設定する
 
 ### 可用性設計
 - EventBridgeに関しては、マネージドサービスなので、可用性に関してできることはほぼない
-- 一方で、Lambdaに関しては、最大同時実行数を4までに制限する。仮に、フロントB・Cがほぼ同時にECSへデプロイが開始された際、同時実行数が1だと、どちらかがどちらかの完了を待つことになるので、タグの付け替え操作が遅くなる。なので、全部で4種類あるサービスが同時に起動しても、いずれかの処理が詰まって他の処理の遅延を防ぐ。同時実行数をこの処理でたくさん消費すると、将来的にLambdaなどを追加したときに同時実行数が圧迫されないように設定する
+- 一方で、Lambdaに関しては、最大同時実行数を1つにつき1、合計4に制限する。これにより、例えばapi-cでのタグ付け替えの処理は同時に1つしか動かないので、競合してタグの値が不適切になるケースを防げる。さらに、同時実行数をこの処理でたくさん消費すると、将来的にLambdaなどを追加したときに同時実行数が圧迫されないように設定する
 - 仮にLambdaによるタグ付け替え処理が失敗すると、現在ECSでデプロイされているイメージと `current` タグが付いたイメージにずれが出て、ロールバックしたくなった時に、必要以上に戻るリスクがある。なので、下記のように対処する
   - LambdaのDestinationで、SNSトピックを指定する
   - SNSトピックにSQSキューとメール等の通知先を購読する
   - SQSにて、失敗した処理の詳細が消えないようにする
   - 失敗処理を保存しても検知できなければ意味がないので、通知を行う
+  - なお、SNSおよびSQSはそれぞれ1つとする。これはECRリポジトリとは異なり、何かに書き込むようなものではなく、処理失敗時の通知、および失敗メッセージを保存しておく目的で採用しているものになる。なので、4つ作成する必要がなく、1つのみとする
 
 ### コストの見積もり・意識した点
 - EventBridge
