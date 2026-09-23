@@ -5,6 +5,7 @@
 - セキュリティの観点から、ECS(API)のSGにポート番号443で0.0.0.0/0のルールを追加したくない。仮に侵害された場合に、HTTPS通信であれば理論上、どこにでも通信ができてしまうため。
 - 現状、ECS(API)は外部APIとしてStripeしか呼び出さないので、このIPリストに絞ったSGルールを追加したい
 - Stripe IPリストはメーリングリストに追加すれば、IPアドレス変更の7日前に通知が来る
+- SG+IPリストという方式自体の妥当性(AWS Network Firewall・Proxyコンテナとの比較検討)は[docs/adr/008-stripe-egress-filtering-approach.md](../adr/008-stripe-egress-filtering-approach.md)参照
 
 ## 設計
 
