@@ -1,3 +1,6 @@
-django
+# Django 6系はMySQL 8.4以上が必須だが、RDSはMySQL 8.0(infra/database/rds.tf)のため5.2 LTS系に固定する。
+# RDSを8.4以上に上げたら6系への更新を検討する
+django>=5.2,<6.0
 gunicorn
 pymysql
+boto3
