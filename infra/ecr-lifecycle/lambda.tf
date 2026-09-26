@@ -5,19 +5,23 @@ data "archive_file" "ecr_tagging" {
 }
 
 resource "aws_lambda_function" "ecr_tagging" {
-  function_name    = "ecr-tagging"
-  role             = aws_iam_role.ecr_tagging_lambda.arn
+  for_each = local.ecs_service_arns
+
+  function_name    = "ecr-tagging-lambda-${each.key}"
+  role             = aws_iam_role.ecr_tagging_lambda[each.key].arn
   handler          = "handler.handler"
   runtime          = "python3.12"
   timeout          = 60
   filename         = data.archive_file.ecr_tagging.output_path
   source_code_hash = data.archive_file.ecr_tagging.output_base64sha256
 
-  reserved_concurrent_executions = 4
+  reserved_concurrent_executions = 1
 }
 
 resource "aws_lambda_function_event_invoke_config" "ecr_tagging" {
-  function_name = aws_lambda_function.ecr_tagging.function_name
+  for_each = local.ecs_service_arns
+
+  function_name = aws_lambda_function.ecr_tagging[each.key].function_name
 
   destination_config {
     on_failure {
