@@ -279,3 +279,97 @@ IAMロールの権限漏れ(`ecs:DescribeTaskDefinition`・`sns:Publish`)も、�
 - [ ] `docs/architecture/README.md`のECRライフサイクルの状態を、Terraform実装・実機確認が終わるまで「構築中」に更新する(実装完了後、実装レビュー合格をもって「完了」に戻す)
 - [ ] `overall.drawio.png`のECR/Lambda部分が、この4分割の詳細まで反映すべきか確認する
 - [ ] 実装完了後、実装レビューを行う
+
+## 2026-09-26 実装レビュー(ECRライフサイクル用LambdaのB/C権限分離)
+
+## レビュー対象
+
+- 対象: `infra/ecr-lifecycle/`の`iam.tf`・`lambda.tf`・`eventbridge.tf`(`sns.tf`・`sqs.tf`・`lambda/handler.py`は変更なし)
+- 対応Step: 2026-09-23設計レビュー合格分のTerraform実装
+- レビュー日: 2026-09-26
+- 確認範囲: `terraform validate`合格まで。`plan`はcompute-b/cのremote stateが未構築のため実行できず、`apply`・実機確認はアプリケーション実装後の再構築時にまとめて行う方針(本人判断、理由は下記)
+
+## 総評
+
+設計通りに実装できており、コード上の指摘事項は最終的にありません。レビューの過程で見つかった実装上の誤りは3点(いずれも修正済み)です。
+
+- `for_each`の繰り返しの元をロールにしたことで`each.value`の意味が変わり、`Resource`にロールのオブジェクトが入る形になっていた(ECS・ECRのARN絞り込みが機能しない)
+- `basic_execution`が`for_each = local...`に変えた後も`each.value.name`のままで、参照が壊れていた
+- `eventbridge.tf`のルールを4つに増やしたものの、`event_pattern`に`resources`の絞り込みが入っておらず、4つとも同じ条件になっていた(1回のデプロイイベントで4つのLambdaが全部起動する状態)
+
+Terraformの`for_each`に慣れていない状態からの着手でしたが、「繰り返しの元を全リソースで`local.ecs_service_arns`に統一し、`each.key`で同名の別リソースを引く」というパターンを理解した後は、`lambda.tf`・`eventbridge.tf`を指摘なしで書けています。
+
+実機確認は見送りとします。理由は、確認のためにnetwork-sg-alb・database・compute-b/cの再構築(橋渡し手順・イメージpush含む)が必要で、アプリケーション実装後にどのみち再構築するため、ここで二重に行うより、アプリ完成後に現実的なデプロイ成功・失敗シナリオでまとめて確認する方が効率的かつ確認の質も高いためです。実装レビューとしては合格とし、mainへのマージに進んで問題ありません。ただし、下記の未確認事項が残っています。
+
+## 観点別レビュー
+
+### 設計
+
+- 設計ドキュメント通り、Lambda・IAMロール・EventBridgeルールがfront-b/api-b/front-c/api-cの4セットに分かれている
+- SNS/SQSは共有のまま、各Lambdaの`event_invoke_config`から同じSNSトピックを送信先にしており、設計判断と一致している
+
+### セキュリティ
+
+- 各ロールのECS読み取り・ECR書き込み・タスク定義参照が、自サービス分のARN1つに絞られている(`each.value`・`local.ecr_repository_arns[each.key]`・`task-definition/${each.key}:*`)
+- 信頼ポリシーの`aws:SourceArn`が関数名(`ecr-tagging-lambda-${each.key}`)と一致しており、他の関数からのAssumeRoleを防げる構造になっている
+- **未確認**: `ecs:DescribeTaskDefinition`をタスク定義ARNで絞る書き方が、AWS側で実際に受け付けられるか。ARNの形式自体は公式ドキュメントに記載があるが、アクション単体がリソース指定に対応しているかは一次情報で確認できていない。非対応の場合、Lambdaの成功時処理(`describe_task_definition`)が`AccessDenied`になるため、実機確認で必ず確かめる
+
+### 可用性
+
+- `reserved_concurrent_executions = 1`が各関数に設定され、設計通り(1関数につき1、合計4)
+- 4つのルールの`resources`絞り込みにより、1つのデプロイイベントが1つのLambdaだけを起動する構造になっている
+
+### 運用性
+
+- `for_each`で4セットを1つの定義にまとめられており、サービスが増減した場合もlocalを直せば追従する。設計レビューで挙げたDRY化の指摘に対応できている
+
+### 保守性
+
+- `iam.tf`の`locals`(`ecs_service_arns`・`ecr_repository_arns`)を`lambda.tf`・`eventbridge.tf`でも共有しており、キーの一元管理ができている
+- 関数名がIAMの信頼ポリシーと`lambda.tf`で手書きの文字列として重複している(`ecr-tagging-lambda-${each.key}`)。現状は一致しているが、片方だけ変更すると壊れるため、将来変更する際は両方を確認する必要がある
+
+### コスト
+
+- 設計時点の見積もり($0)から変更なし
+
+### パフォーマンス
+
+- 変更なし
+
+### Terraform化した場合の改善点
+
+- 関数名の重複(上記)を、`locals`に関数名のmapを定義して両方から参照する形にすれば、片方だけ変更する事故を防げる。今回の規模では必須ではなく、任意の改善
+
+### AWS Well-Architected Framework 6本柱
+
+- 運用上の優秀性: 実機確認を後回しにする判断とその理由・未確認事項を記録に残せている
+- セキュリティ: サービス単位の最小権限が実装として揃った。`DescribeTaskDefinition`の絞り込みのみ実機未確認
+- 信頼性: 既存の失敗検知(Destination→SNS→SQS)は変更なし。ただし4分割後の動作確認は未実施
+- パフォーマンス効率: 変更なし
+- コスト最適化: 変更なし($0)
+- 持続可能性: 特筆事項なし
+
+### 実務ならどう設計するか
+
+- 実務でも、`for_each`で複数リソースを繰り返す際、「繰り返しの元を何にするか」で`each.value`の意味が変わることは典型的なつまずきどころ。繰り返しの元を1つのlocalに統一し、`each.key`で他のリソースを引く書き方は、読みやすさの面でも標準的なパターン
+- 実機確認のコストが高い場合に、確認をより現実的なシナリオが用意できるタイミングまで後ろ倒しにする判断自体は実務でも行われる。ただし、未確認事項を明文化して次のアクションに残すことが前提
+
+## 理解できていること
+
+- `for_each`で`each.key`が要素の名前、`each.value`が要素の中身であり、`[each.key]`で別のリソース・mapから同名のものを引ける
+- Lambda関数1つにつきIAMロール1つ、`reserved_concurrent_executions`は関数単位で効く
+- EventBridgeの`event_pattern`の`resources`で、発生元リソース単位にルールを絞り込める
+
+## 曖昧なこと
+
+- `for_each`の「繰り返しの元」を何にすべきかの選び方(今回はlocalに統一する形で整理した。他のレイヤーで同様の書き方をする際に再確認する)
+
+## 理解できていないこと
+
+- 特になし
+
+## 次のアクション
+
+- [ ] アプリケーション実装後にcompute層を再構築する際、次を実機確認する: (1) 4分割後のLambdaが、対応するサービスのデプロイイベントだけで起動し、タグ付け替え(`current`→`success-<digest>`)が成功する、(2) `ecs:DescribeTaskDefinition`のタスク定義ARN絞り込みが`AccessDenied`にならない(なる場合は`"*"`に戻す判断が必要)、(3) 持ち越し中の、ECSデプロイ失敗(サーキットブレーカー発動)から`fail-`タグ付与までの経路
+- [ ] `overall.drawio.png`のECR/Lambda部分が、この4分割の詳細まで反映すべきか確認する(任意)
+- [ ] mainへのマージに進んでよい
