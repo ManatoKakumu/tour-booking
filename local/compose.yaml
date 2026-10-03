@@ -1,5 +1,5 @@
 # ローカル開発環境。nginx(proxy)がCloudFront+ALBのパス振り分けを再現する。
-# 認証(Cognito)・S3・Stripeは再現しない(apps/api-*/api/auth.py等を参照)
+# 認証(Cognito)・S3は再現しない。StripeはテストモードのキーでAPIを実際に呼ぶ(local/README.md参照)
 name: tour-booking-local
 
 x-api-env: &api-env
