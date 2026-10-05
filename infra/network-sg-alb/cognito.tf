@@ -71,7 +71,8 @@ resource "aws_cognito_user_pool_domain" "c" {
 }
 
 resource "aws_secretsmanager_secret" "cognito_client_secret_b" {
-  name = "cognito-client-secret-b"
+  name                    = "cognito-client-secret-b"
+  recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "cognito_client_secret_b" {
@@ -80,7 +81,8 @@ resource "aws_secretsmanager_secret_version" "cognito_client_secret_b" {
 }
 
 resource "aws_secretsmanager_secret" "cognito_client_secret_c" {
-  name = "cognito-client-secret-c"
+  name                    = "cognito-client-secret-c"
+  recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "cognito_client_secret_c" {

@@ -22,6 +22,8 @@ locals {
       security_group_id       = data.terraform_remote_state.network_sg_alb.outputs.ecs_front_security_group_id
       target_group_arn        = data.terraform_remote_state.network_sg_alb.outputs.target_group_arns["front-b"]
       target_group_arn_suffix = data.terraform_remote_state.network_sg_alb.outputs.target_group_arn_suffixes["front-b"]
+      environment             = []
+      secrets                 = []
     }
     api-b = {
       execution_role_arn      = aws_iam_role.ecs_execution_api_b.arn
@@ -33,6 +35,16 @@ locals {
       security_group_id       = data.terraform_remote_state.network_sg_alb.outputs.ecs_api_security_group_id
       target_group_arn        = data.terraform_remote_state.network_sg_alb.outputs.target_group_arns["api-b"]
       target_group_arn_suffix = data.terraform_remote_state.network_sg_alb.outputs.target_group_arn_suffixes["api-b"]
+      environment = [
+        { name = "DB_HOST", value = data.terraform_remote_state.database.outputs.db_endpoint },
+        { name = "DB_NAME", value = "tour_booking" },
+        { name = "DB_USER", value = "b_api" },
+        { name = "AWS_REGION", value = var.default_region },
+        { name = "IMAGE_BUCKET_NAME", value = data.terraform_remote_state.cloudfront_s3.outputs.image_bucket_name }
+      ]
+      secrets = [
+        { name = "DB_PASSWORD", valueFrom = data.terraform_remote_state.database.outputs.app_secret_arns["b_api"] }
+      ]
     }
   }
 }
@@ -62,6 +74,8 @@ resource "aws_ecs_task_definition" "this" {
           "awslogs-stream-prefix" = each.key
         }
       }
+      environment = each.value.environment
+      secrets     = each.value.secrets
     }
   ])
 
