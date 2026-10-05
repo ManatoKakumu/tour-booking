@@ -18,7 +18,7 @@ resource "aws_lb_target_group" "front_b" {
   target_type = "ip"
 
   health_check {
-    path                = "/"
+    path                = "/b/"
     healthy_threshold   = 3
     unhealthy_threshold = 3
     interval            = 30
