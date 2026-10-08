@@ -3,11 +3,13 @@ variable "developer_iam_user_arn" {
 }
 
 resource "aws_s3_bucket" "static_page_bucket" {
-  bucket = "tour-booking-static-12jvi38gv2"
+  bucket        = "tour-booking-static-12jvi38gv2"
+  force_destroy = true
 }
 
 resource "aws_s3_bucket" "image_bucket" {
-  bucket = "tour-booking-image-3hv82jg9f9"
+  bucket        = "tour-booking-image-3hv82jg9f9"
+  force_destroy = true
 }
 
 resource "aws_s3_bucket_versioning" "static_page_bucket_versioning" {
@@ -90,4 +92,21 @@ resource "aws_s3_bucket_policy" "image_bucket" {
       }
     ]
   })
+}
+
+locals {
+  static_pages = {
+    "index.html" = "index.html"
+    "about"      = "about.html"
+    "terms"      = "terms.html"
+  }
+}
+
+resource "aws_s3_object" "static_pages" {
+  for_each     = local.static_pages
+  bucket       = aws_s3_bucket.static_page_bucket.id
+  key          = each.key
+  source       = "${path.module}/../../apps/static-pages/${each.value}"
+  content_type = "text/html; charset=utf-8"
+  etag         = filemd5("${path.module}/../../apps/static-pages/${each.value}")
 }
