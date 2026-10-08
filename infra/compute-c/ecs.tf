@@ -21,6 +21,8 @@ locals {
       security_group_id       = data.terraform_remote_state.network_sg_alb.outputs.ecs_front_security_group_id
       target_group_arn        = data.terraform_remote_state.network_sg_alb.outputs.target_group_arns["front-c"]
       target_group_arn_suffix = data.terraform_remote_state.network_sg_alb.outputs.target_group_arn_suffixes["front-c"]
+      environment             = []
+      secrets                 = []
     }
     api-c = {
       execution_role_arn      = aws_iam_role.ecs_execution_api_c.arn
@@ -31,6 +33,16 @@ locals {
       security_group_id       = data.terraform_remote_state.network_sg_alb.outputs.ecs_api_security_group_id
       target_group_arn        = data.terraform_remote_state.network_sg_alb.outputs.target_group_arns["api-c"]
       target_group_arn_suffix = data.terraform_remote_state.network_sg_alb.outputs.target_group_arn_suffixes["api-c"]
+      environment = [
+        { name = "DB_HOST", value = data.terraform_remote_state.database.outputs.db_endpoint },
+        { name = "DB_NAME", value = "tour_booking" },
+        { name = "DB_USER", value = "c_api" },
+        { name = "PUBLIC_BASE_URL", value = "https://sample-sample.jp" }
+      ]
+      secrets = [
+        { name = "DB_PASSWORD", valueFrom = data.terraform_remote_state.database.outputs.app_secret_arns["c_api"] },
+        { name = "STRIPE_SECRET_KEY", valueFrom = aws_secretsmanager_secret.stripe_secret_key.arn }
+      ]
     }
   }
 }
@@ -59,6 +71,8 @@ resource "aws_ecs_task_definition" "this" {
           "awslogs-stream-prefix" = each.key
         }
       }
+      environment = each.value.environment
+      secrets     = each.value.secrets
     }
   ])
 
