@@ -121,6 +121,9 @@ resource "aws_lb_listener_rule" "b_api" {
       user_pool_arn       = aws_cognito_user_pool.b.arn
       user_pool_client_id = aws_cognito_user_pool_client.b.id
       user_pool_domain    = aws_cognito_user_pool_domain.b.domain
+      # B用とC用でセッションCookie名を分ける。既定名のままだと、片方のUser Poolで
+      # ログインしたCookieが、もう片方のルールでも「認証済み」として通ってしまう
+      session_cookie_name = "TourBookingAuthSessionB"
     }
   }
 
@@ -149,6 +152,9 @@ resource "aws_lb_listener_rule" "b_front" {
       user_pool_arn       = aws_cognito_user_pool.b.arn
       user_pool_client_id = aws_cognito_user_pool_client.b.id
       user_pool_domain    = aws_cognito_user_pool_domain.b.domain
+      # B用とC用でセッションCookie名を分ける。既定名のままだと、片方のUser Poolで
+      # ログインしたCookieが、もう片方のルールでも「認証済み」として通ってしまう
+      session_cookie_name = "TourBookingAuthSessionB"
     }
   }
 
@@ -177,6 +183,9 @@ resource "aws_lb_listener_rule" "c_api" {
       user_pool_arn       = aws_cognito_user_pool.c.arn
       user_pool_client_id = aws_cognito_user_pool_client.c.id
       user_pool_domain    = aws_cognito_user_pool_domain.c.domain
+      # B用とC用でセッションCookie名を分ける。既定名のままだと、片方のUser Poolで
+      # ログインしたCookieが、もう片方のルールでも「認証済み」として通ってしまう
+      session_cookie_name = "TourBookingAuthSessionC"
     }
   }
 
@@ -205,6 +214,9 @@ resource "aws_lb_listener_rule" "c_front" {
       user_pool_arn       = aws_cognito_user_pool.c.arn
       user_pool_client_id = aws_cognito_user_pool_client.c.id
       user_pool_domain    = aws_cognito_user_pool_domain.c.domain
+      # B用とC用でセッションCookie名を分ける。既定名のままだと、片方のUser Poolで
+      # ログインしたCookieが、もう片方のルールでも「認証済み」として通ってしまう
+      session_cookie_name = "TourBookingAuthSessionC"
     }
   }
 

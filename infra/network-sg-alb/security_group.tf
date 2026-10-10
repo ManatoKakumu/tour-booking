@@ -85,6 +85,17 @@ resource "aws_vpc_security_group_egress_rule" "alb_to_ecs_api" {
   description                  = "To ECS api"
 }
 
+# ALB → Cognito (ALB側のOutbound)
+# authenticate-cognitoのトークン交換・ユーザー情報取得用。Cognitoのドメインは固定IPを持たないため宛先は絞れない
+resource "aws_vpc_security_group_egress_rule" "alb_to_cognito" {
+  security_group_id = aws_security_group.alb.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+  description       = "To Cognito (token/userinfo endpoints)"
+}
+
 # ECS front ← ALB（ECS front側のInbound）
 resource "aws_vpc_security_group_ingress_rule" "ecs_front_from_alb" {
   security_group_id            = aws_security_group.ecs_front.id

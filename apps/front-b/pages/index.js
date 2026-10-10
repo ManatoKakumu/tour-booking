@@ -69,8 +69,8 @@ export default function GuideHome() {
           <textarea name="description" rows={3} style={{ width: "100%" }} />
         </label>
         <label>
-          価格(円)
-          <input name="price" type="number" min={1} required />
+          価格(円、50円以上)
+          <input name="price" type="number" min={50} required />
         </label>
         <label>
           定員

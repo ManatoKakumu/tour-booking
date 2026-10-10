@@ -74,7 +74,9 @@ resource "aws_iam_role_policy" "ecs_ecr_access" {
         Action = [
           "ecs:DescribeTaskDefinition"
         ]
-        Resource = "arn:aws:ecs:${var.default_region}:${data.aws_caller_identity.current.account_id}:task-definition/${each.key}:*"
+        # ecs:DescribeTaskDefinitionはリソースレベルの権限に対応しておらず、ARNで絞ると
+        # AccessDeniedになる(実機で確認)。読み取り専用のアクションのため "*" で許可する
+        Resource = "*"
       }
     ]
   })
