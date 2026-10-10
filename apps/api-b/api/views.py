@@ -8,6 +8,8 @@ logger = logging.getLogger(__name__)
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
+# Stripeの日本円の最低決済金額。これ未満のツアーは予約時に決済を開始できない
+MIN_PRICE_JPY = 50
 
 
 def health(request):
@@ -52,6 +54,8 @@ def tours(request):
         return error("titleは1〜100文字で入力してください", 400)
     if price is None or capacity is None:
         return error("price・capacityは1以上の整数で入力してください", 400)
+    if price < MIN_PRICE_JPY:
+        return error(f"priceは{MIN_PRICE_JPY}円以上で入力してください", 400)
     if image is not None:
         if image.content_type not in ALLOWED_IMAGE_TYPES:
             return error("画像はJPEG・PNG・WebPのみ対応しています", 400)
