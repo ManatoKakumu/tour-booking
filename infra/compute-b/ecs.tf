@@ -110,6 +110,11 @@ resource "aws_ecs_service" "this" {
     enable   = true
     rollback = true
   }
+
+  # デプロイ(タスク定義のリビジョン更新)はCI/CDが行うため、Terraformで巻き戻さない
+  lifecycle {
+    ignore_changes = [task_definition]
+  }
 }
 
 resource "aws_appautoscaling_target" "this" {

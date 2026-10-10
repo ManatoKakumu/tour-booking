@@ -134,6 +134,12 @@ resource "aws_iam_role_policy" "api_c_ecr_push" {
         Resource = aws_ecs_task_definition.db_user_setup_c.arn
       },
       {
+        # RunTaskで起動したDBセットアップタスクの終了待ち・終了コードの確認に必要
+        Effect   = "Allow"
+        Action   = "ecs:DescribeTasks"
+        Resource = "${replace(aws_ecs_cluster.c.arn, ":cluster/", ":task/")}/*"
+      },
+      {
         Effect   = "Allow"
         Action   = "iam:PassRole"
         Resource = aws_iam_role.db_user_setup_c.arn
