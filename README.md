@@ -31,7 +31,8 @@ Well-Architected Frameworkの各柱に対応させた改善ステップ。実装
 詳細は [docs/WORKING_AGREEMENT.md](docs/WORKING_AGREEMENT.md)。
 
 - 設計判断(何を作るか・なぜそうするか)は本人が行う。Claudeはソクラテス式の設計レビュー・壁打ち役に徹する
-- コード(Terraform・アプリケーション)は自分の手で書く。Claudeに書かせない
+- Terraformのコードは自分の手で書く。Claudeに書かせない
+- アプリケーション層(画面・業務ロジック・テーブル定義)は、AWSアーキテクチャが主眼のためAI(Claude)を活用して実装する。ただしAWS・外部サービスとの連携部分(ALBが付与する認証ヘッダーの検証、S3・Secrets Manager・Stripeとの接続)とDB権限の設計(GRANT)は自分で実装する
 - 初めて触る構文は最小サンプルの提示のみ許可(構文と設計判断を混同しない)
 
 ## リポジトリ構成
@@ -44,6 +45,8 @@ tour-booking/
 │   ├── architecture/          # AWSサービス単位の設計ドキュメント
 │   └── reviews/               # 設計・実装レビューの記録
 ├── templates/                 # 設計ドキュメント・レビューのテンプレート
+├── apps/                      # アプリケーション(front-b/front-c: Next.js、api-b/api-c: Django)
+├── local/                     # ローカル開発環境(docker compose)
 └── infra/                     # Terraformコード(サービス単位でディレクトリ・state分割)
 ```
 

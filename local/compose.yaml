@@ -1,0 +1,94 @@
+# ローカル開発環境。nginx(proxy)がCloudFront+ALBのパス振り分けを再現する。
+# 認証(Cognito)・S3は再現しない。StripeはテストモードのキーでAPIを実際に呼ぶ(local/README.md参照)
+name: tour-booking-local
+
+x-api-env: &api-env
+  DJANGO_DEBUG: "1"
+  DB_HOST: db
+  DB_NAME: tour_booking
+  # ローカルでは権限分離(GRANT)を再現せず、rootで接続する
+  DB_USER: root
+  DB_PASSWORD: localroot
+
+services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: localroot
+      MYSQL_DATABASE: tour_booking
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-plocalroot"]
+      interval: 5s
+      retries: 20
+
+  # toursテーブルはapi-bが、bookingsテーブルはapi-cがマイグレーションを管理する(bookingsがtoursを参照するため順序が必要)
+  api-b:
+    build: ../apps/api-b
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:3000"
+    environment:
+      <<: *api-env
+      LOCAL_DEV_USER_SUB: local-guide-0001
+    volumes:
+      - ../apps/api-b:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3000/b/api/health/')"]
+      interval: 5s
+      retries: 30
+
+  api-c:
+    build: ../apps/api-c
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:3000"
+    environment:
+      <<: *api-env
+      LOCAL_DEV_USER_SUB: local-traveler-0001
+      PUBLIC_BASE_URL: http://localhost:8080
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+    volumes:
+      - ../apps/api-c:/app
+    depends_on:
+      api-b:
+        condition: service_healthy
+
+  front-b:
+    image: node:20-slim
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
+    environment:
+      WATCHPACK_POLLING: "true"
+    volumes:
+      - ../apps/front-b:/app
+      - front-b-node-modules:/app/node_modules
+
+  front-c:
+    image: node:20-slim
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
+    environment:
+      WATCHPACK_POLLING: "true"
+    volumes:
+      - ../apps/front-c:/app
+      - front-c-node-modules:/app/node_modules
+
+  proxy:
+    image: nginx:1.27-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../apps/static-pages:/usr/share/nginx/static:ro
+    depends_on:
+      - api-b
+      - api-c
+      - front-b
+      - front-c
+
+volumes:
+  db-data:
+  front-b-node-modules:
+  front-c-node-modules:
