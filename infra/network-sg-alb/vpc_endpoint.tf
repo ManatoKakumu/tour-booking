@@ -83,8 +83,8 @@ data "aws_iam_policy_document" "s3_endpoint" {
     }
     condition {
       test     = "IpAddress"
-      variable = "aws:SourceIp"
-      values   = ["10.0.2.0/24", "10.0.12.0/24"]
+      variable = "aws:VpcSourceIp"
+      values   = [for s in aws_subnet.ecs_api : s.cidr_block]
     }
   }
 }

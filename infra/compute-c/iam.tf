@@ -237,7 +237,10 @@ resource "aws_iam_role_policy" "ecs_execution_api_c" {
         Action = [
           "secretsmanager:GetSecretValue"
         ]
-        Resource = data.terraform_remote_state.database.outputs.app_secret_arns["c_api"]
+        Resource = [
+          data.terraform_remote_state.database.outputs.app_secret_arns["c_api"],
+          aws_secretsmanager_secret.stripe_secret_key.arn
+        ]
       }
     ]
   })

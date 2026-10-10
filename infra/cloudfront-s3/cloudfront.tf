@@ -20,6 +20,14 @@ resource "aws_cloudfront_vpc_origin" "alb" {
   }
 }
 
+data "aws_cloudfront_cache_policy" "caching_disabled" {
+  name = "Managed-CachingDisabled"
+}
+
+data "aws_cloudfront_origin_request_policy" "all_viewer" {
+  name = "Managed-AllViewer"
+}
+
 resource "aws_cloudfront_distribution" "main" {
   enabled             = true
   default_root_object = "index.html"
@@ -53,12 +61,11 @@ resource "aws_cloudfront_distribution" "main" {
     allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
     cached_methods         = ["GET", "HEAD"]
 
-    forwarded_values {
-      query_string = true
-      cookies {
-        forward = "all"
-      }
-    }
+    # ログイン状態で内容が変わるページ・APIのため、キャッシュしない
+    cache_policy_id = data.aws_cloudfront_cache_policy.caching_disabled.id
+    # Hostヘッダーを含めてALBへ転送する。ALBはHostからCognitoのredirect_uriを組み立て、
+    # CloudFrontはHostをALBの証明書(sample-sample.jp)との照合に使う
+    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer.id
   }
 
   ordered_cache_behavior {
