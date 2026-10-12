@@ -6,10 +6,10 @@
   - Outbound：ECS(フロント・API), Cognito(トークン・ユーザー情報エンドポイント、443。Cognitoのドメインは固定IPを持たないため、宛先は0.0.0.0/0)
 - ECS(フロント)
   - Inbound：ALB
-  - Outbound：VPCエンドポイント(ecr.api/ecr.dkr/logs), S3(Gateway経由)
+  - Outbound：VPCエンドポイント(ecr.api/ecr.dkr/logs), S3(ECRイメージの取得, Gateway経由)
 - ECS(API)
   - Inbound：ALB
-  - Outbound：RDS, VPCエンドポイント(ecr.api/ecr.dkr/logs/secretsmanager), S3(画像用バケット, Gateway経由), NAT Gateway経由で外部API呼び出し
+  - Outbound：RDS, VPCエンドポイント(ecr.api/ecr.dkr/logs/secretsmanager), S3(ECRイメージの取得・画像用バケットへの保存, Gateway経由), NAT Gateway経由で外部API呼び出し
 - RDS
   - Inbound：ECS(API)
   - Outbound：なし。プライマリ - スタンバイ間の同期処理はSGの設定にかかわらずAWSが内部で自動的に処理するため、RDSは特に付与する必要はない
