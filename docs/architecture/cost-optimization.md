@@ -28,3 +28,28 @@
 
 ### コストの見積もり・意識した点
 - 通知のみの場合は個数に関係なく無料で、今回は通知のみなので、無料
+
+## 全体の月額試算
+
+各サービスの設計ドキュメントに記載した試算をまとめたもの。金額の根拠(単価・想定)は各ドキュメントを参照。
+
+| サービス | 月額 | 主な内訳 | ドキュメント |
+|---|---|---|---|
+| ネットワーク | $151.84 | NAT Gateway $90.52、VPCエンドポイント $61.32 | [network.md](network.md) |
+| コンピュート | $110.41〜$155.39 | ECS(Fargate) $89.97〜$134.95(最小〜最大タスク数)、Secret Manager用VPCエンドポイント $20.44 | [compute.md](compute.md) |
+| データベース | $43.27 | RDS $42.02、Secret Manager $1.25 | [database.md](database.md) |
+| ALB | $23.58 | ALB本体 $17.74、LCU $5.84 | [alb.md](alb.md) |
+| Cognito | $22.50 | Plus tier $22、Contributor Insights $0.5 | [cognito.md](cognito.md) |
+| WAF | $22.00 | Web ACL $15、ルール $7 | [waf.md](waf.md) |
+| Route53 | $0.50 | ホストゾーン | [route53.md](route53.md) |
+| S3(静的配信) | $0.25 | ストレージ | [s3.md](s3.md) |
+| CI/CD | $0.10 | ECRのストレージ | [ci-cd.md](ci-cd.md) |
+| CloudFront | $0 | 無料枠内 | [cloudfront.md](cloudfront.md) |
+| ACM | $0 | - | [acm.md](acm.md) |
+| ECRライフサイクル | $0 | 無料枠内 | [ecr-lifecycle.md](ecr-lifecycle.md) |
+| Stripe IPリスト同期 | $0 | 無料枠内 | [stripe-ip-sync.md](stripe-ip-sync.md) |
+| Budgets | $0 | 通知のみ | 本ドキュメント |
+| 合計 | $374.45〜$419.43 | | |
+
+- ネットワークとコンピュートで全体の約7割を占める
+- ネットワークの金額の大半は、NAT GatewayとVPCエンドポイントという、時間で課金されるリソースによるもの。トラフィックがほぼ無くても発生する固定費にあたる
