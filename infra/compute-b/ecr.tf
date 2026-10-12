@@ -1,6 +1,8 @@
 resource "aws_ecr_repository" "front_b" {
   name                 = "front-b"
   image_tag_mutability = "IMMUTABLE"
+  # 検証のたびに作り直す運用のため、イメージが残っていてもdestroyできるようにする
+  force_delete = true
 
   image_scanning_configuration {
     scan_on_push = true
@@ -10,6 +12,8 @@ resource "aws_ecr_repository" "front_b" {
 resource "aws_ecr_repository" "api_b" {
   name                 = "api-b"
   image_tag_mutability = "IMMUTABLE"
+  # 検証のたびに作り直す運用のため、イメージが残っていてもdestroyできるようにする
+  force_delete = true
 
   image_scanning_configuration {
     scan_on_push = true
