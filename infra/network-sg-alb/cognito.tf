@@ -70,26 +70,6 @@ resource "aws_cognito_user_pool_domain" "c" {
   user_pool_id = aws_cognito_user_pool.c.id
 }
 
-resource "aws_secretsmanager_secret" "cognito_client_secret_b" {
-  name                    = "cognito-client-secret-b"
-  recovery_window_in_days = 0
-}
-
-resource "aws_secretsmanager_secret_version" "cognito_client_secret_b" {
-  secret_id     = aws_secretsmanager_secret.cognito_client_secret_b.id
-  secret_string = aws_cognito_user_pool_client.b.client_secret
-}
-
-resource "aws_secretsmanager_secret" "cognito_client_secret_c" {
-  name                    = "cognito-client-secret-c"
-  recovery_window_in_days = 0
-}
-
-resource "aws_secretsmanager_secret_version" "cognito_client_secret_c" {
-  secret_id     = aws_secretsmanager_secret.cognito_client_secret_c.id
-  secret_string = aws_cognito_user_pool_client.c.client_secret
-}
-
 resource "aws_cognito_risk_configuration" "b" {
   user_pool_id = aws_cognito_user_pool.b.id
 

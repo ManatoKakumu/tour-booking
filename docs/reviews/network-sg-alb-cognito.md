@@ -438,3 +438,13 @@ WAF/ACMの`us_east_1`エイリアスプロバイダは、AWS側の技術的制�
 - [ ] SES導入によるユーザーへの直接通知の実装(見送り中、将来の改善候補として`cognito.md`に記録済み)
 - [ ] `terraform destroy`の実施
 - [ ] 変更のコミット・PR作成
+
+## 2026-10-12 Cognito App ClientシークレットのSecrets Manager保管を削除
+
+`infra/network-sg-alb/cognito.tf`から、App Clientシークレットを保管していたSecrets Managerのリソース4つ(`aws_secretsmanager_secret`・`aws_secretsmanager_secret_version`、B・C各1組)を削除した。
+
+- 経緯: 2026-08-14の設計レビューで、レビュー側が「App Clientシークレットの保管方法が書かれていない」ことを抜けとして指摘し、Secrets Managerへの保管が実装された
+- 削除の理由: ALBの`authenticate-cognito`は、リスナールールに指定されたクライアントIDをもとに、ALB自身がCognitoからシークレットを取得する。アプリケーション(ECS)もこのシークレットを使わないため、保管したシークレットを読み取る主体が存在しなかった。当時の指摘は、この構成には当てはまっていなかった
+- 影響: シークレットの値は`aws_cognito_user_pool_client`の属性としてもstateに記録されているため、削除によって露出する場所は変わらない。必要になった時点で追加できる
+- 副次的な効果: destroy後の再構築時に、同名のシークレットが削除猶予期間中で作成できない、という問題が過去に発生していたが、その原因となるリソースが無くなった
+- 確認: `terraform validate`は通過。実機での確認は次回の構築時に行う
