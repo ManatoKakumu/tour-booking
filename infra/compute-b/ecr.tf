@@ -27,13 +27,14 @@ resource "aws_ecr_lifecycle_policy" "front_b" {
     rules = [
       {
         rulePriority = 1
-        description  = "「success」タグの画像を90日で削除"
+        description  = "「success」タグの画像は直近5件のみ残す"
         selection = {
           tagStatus     = "tagged"
           tagPrefixList = ["success"]
-          countType     = "sinceImagePushed"
-          countUnit     = "days"
-          countNumber   = 90
+          # sinceImagePushedはタグを付けた日ではなくプッシュ日から数えるため、長くcurrentだった
+          # イメージがsuccessに変わった直後に消えてしまう。ロールバック先を残すため件数で保持する
+          countType   = "imageCountMoreThan"
+          countNumber = 5
         }
         action = {
           type = "expire"
@@ -64,13 +65,14 @@ resource "aws_ecr_lifecycle_policy" "api_b" {
     rules = [
       {
         rulePriority = 1
-        description  = "「success」タグの画像を90日で削除"
+        description  = "「success」タグの画像は直近5件のみ残す"
         selection = {
           tagStatus     = "tagged"
           tagPrefixList = ["success"]
-          countType     = "sinceImagePushed"
-          countUnit     = "days"
-          countNumber   = 90
+          # sinceImagePushedはタグを付けた日ではなくプッシュ日から数えるため、長くcurrentだった
+          # イメージがsuccessに変わった直後に消えてしまう。ロールバック先を残すため件数で保持する
+          countType   = "imageCountMoreThan"
+          countNumber = 5
         }
         action = {
           type = "expire"

@@ -7,6 +7,18 @@ locals {
     GenericRFI_BODY         = "GenericRFI_Body"
     EC2MetaDataSSRF_BODY    = "EC2MetaDataSSRF_Body"
   }
+
+  # AWSManagedRulesSQLiRuleSetのうち、リクエスト本体を検査するルール(ルール名 = 付与されるラベル名)
+  sqli_rule_set_body_rules = {
+    SQLi_BODY                 = "SQLi_Body"
+    SQLiExtendedPatterns_BODY = "SQLiExtendedPatterns_Body"
+  }
+
+  # 本体を検査するルールが付与するラベル(block-body-rules-except-image-uploadでのブロック判定に使う)
+  body_rule_labels = concat(
+    [for label in values(local.common_rule_set_body_rules) : "awswaf:managed:aws:core-rule-set:${label}"],
+    [for label in values(local.sqli_rule_set_body_rules) : "awswaf:managed:aws:sql-database:${label}"]
+  )
 }
 
 resource "aws_wafv2_web_acl" "cloudfront" {
@@ -54,10 +66,44 @@ resource "aws_wafv2_web_acl" "cloudfront" {
     }
   }
 
-  # ラベルは、付与したルールより後に評価されるルールでしか参照できないため、common-rule-setより後ろに置く
+  rule {
+    name     = "sqli-rule-set"
+    priority = 4
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesSQLiRuleSet"
+        vendor_name = "AWS"
+
+        # common-rule-setと同じ理由で、本体(BODY)を検査するルールはカウント(ラベル付け)のみにする
+        dynamic "rule_action_override" {
+          for_each = local.sqli_rule_set_body_rules
+          content {
+            name = rule_action_override.key
+            action_to_use {
+              count {}
+            }
+          }
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "sqli-rule-set"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  # ラベルは、付与したルールより後に評価されるルールでしか参照できないため、
+  # common-rule-set・sqli-rule-setより後ろに置く
   rule {
     name     = "block-body-rules-except-image-upload"
-    priority = 4
+    priority = 5
 
     action {
       block {}
@@ -68,11 +114,11 @@ resource "aws_wafv2_web_acl" "cloudfront" {
         statement {
           or_statement {
             dynamic "statement" {
-              for_each = local.common_rule_set_body_rules
+              for_each = local.body_rule_labels
               content {
                 label_match_statement {
                   scope = "LABEL"
-                  key   = "awswaf:managed:aws:core-rule-set:${statement.value}"
+                  key   = statement.value
                 }
               }
             }

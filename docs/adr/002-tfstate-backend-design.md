@@ -71,7 +71,7 @@
   - コンピュート層などの性質が異なる静的配信リソースにまで影響を及ぼさないように分割
 - Route53 / ACM
   - 初期段階ではCloudFrontと同じステートに管理していたが、NW層とSSL証明書関連のリソース循環参照が発生したため、それを解消するために分割
-  - ※SG部分は循環参照が発生するため、初回applyのみ、SGの該当部分だけをコメントアウトしてapplyし、その後にコメントアウトを外して再度applyする必要がある。これはCloudFrontとSGを分割してステート管理している以上、避けられない
+  - ※`network-sg-alb` とCloudFront/S3の間には循環参照が残るため、初回applyのみ、`network-sg-alb` 側の該当部分(ALB用SGのCloudFrontからのInboundルール、S3向けGatewayエンドポイントポリシーの画像用バケット向けステートメント、の2か所)をコメントアウトしてapplyし、CloudFront/S3のapply後にコメントアウトを外して再度applyする必要がある。これはステートを分割して管理している以上、避けられない
 - WAF
   - セキュリティルールの変更など、CloudFrontなどと比べて変更頻度が高くなると想定されるため分離
 - B側コンピュート(ECS)
@@ -84,7 +84,7 @@
   - ECRライフサイクルポリシー自体
     - ライフサイクルポリシーはリポジトリ1つに紐づく性質であるため、compute-b/compute-cに記載
   - Lambda/EventBridge/SNS/SQS
-    - 一方、デプロイ成功可否を検知してタグを付け替えるLambda/EventBridge/SNS/SQSによる処理は、フロント・APIのB・C4つのサービスに対して1つの共通処理が動く構成であり、個別のstateには属さない。そのため、独立したstateとした
+    - 一方、デプロイ成功可否を検知してタグを付け替えるLambda/EventBridge/SNS/SQSによる処理は、フロント・APIのB・C4つのサービスそれぞれに同じ構成(Lambda・EventBridgeルール・IAMロール)を1組ずつ作り、通知用のSNS/SQSは共有する。B・C両方のコンピュートにまたがるため、個別のstateには属さない。そのため、独立したstateとした
 - Lambda(Stripe更新処理)
   - `network-sg-alb` に同居させると、Lambdaの更新のたびに、土台となるNW構成要素に対して無駄なスキャンが走ることになるので、独立したステートとした。また、独立させることで、事故の影響範囲を小さくしたい
 - Budgets

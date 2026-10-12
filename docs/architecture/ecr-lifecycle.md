@@ -12,9 +12,10 @@
 ### 選定理由
 - ECRにプッシュされたイメージには下記の3種類を設ける
   - `current`：ECSに現在使われているイメージに付与する。絶対に削除しない。ライフサイクルポリシーなし
-  - `success-<digest先頭12文字>`：過去にECSへデプロイ成功したが、今は使われていないイメージに付与する。90日後に削除。数値に根拠はないが、ECSへのデプロイ失敗時に巻き戻せるための保険なので、ECSへの新イメージデプロイ平均間隔より少し長めに設けるのが良いと考えている
+  - `success-<digest先頭12文字>`：過去にECSへデプロイ成功したが、今は使われていないイメージに付与する。直近5件のみ残し、それより古いものは削除する。ECRのライフサイクルポリシーの日数指定は、タグを付けた日ではなくプッシュ日から数える。そのため日数で指定すると、長く `current` だったイメージが `success-` に変わった直後に削除され、ロールバック先が残らない。これを避けるため件数で保持する。5件という数値に根拠はないが、何世代前まで巻き戻したいかで決めるのが良いと考えている
   - `fail-<image_tag>`：過去にECSへデプロイ失敗したイメージに付与する。30日後に削除。こちらも数値に根拠はないが、再発防止のための調査にかかる平均時間より少し長めに設けるのが良いと考えている
   - 新しいイメージでECSへのデプロイが成功したら、現在 `current` のタグを削除したのちに `success-<digest先頭12文字>` を付与し、新しいイメージに `current` のイメージを付与する
+  - 過去に `success-` が付いたイメージが再び `current` になった場合(ロールバックなど)は、そのイメージの `success-` タグを外す。残したままだと、稼働中のイメージがライフサイクルポリシーの削除対象になるため
 - EventBridge+Lambda構成にする
   - ECSへのデプロイが行われた際に必要な処理なので、イベント駆動型が適しており、EventBridgeを使えばいいと判断
   - 実際のタグ付与処理に関しては、特にOSなどを管理する必要がない、かつ常時稼働させるべきものでもなくコストを抑えたい、という観点から、Lambdaと判断した
@@ -37,8 +38,8 @@
   - Lambda関数は4つあるので、ルールを4つ生成する。 `resources` フィールドにどのECSからのイベント化がわかるので、それを用いて起動するLambdaを識別する
 - Lambda
   - front-b/api-b/front-c/api-c用に4つ作成する
-  - `ecs:ListServiceDeployments`, `ecs:DescribeServiceDeployments`, `ecs:DescribeServiceRevisions`, `ecs:DescribeServices` を特定のECSサービス(front-b/api-b/front-c/api-cいずれか)のARN指定で絞る。ECSデプロイサーキットブレーカーからデプロイ成功可否の情報を得るために付与
-  - `ecr:PutImage`, `ecr:BatchGetImage`, `ecr:DescribeImages`, `ecr:BatchDeleteImage` を特定のECRリポジトリ(front-b/api-b/front-c/api-cいずれか)のARN指定で絞る。ECRイメージのタグ付与・削除に必要
+  - `ecs:DescribeServices` を特定のECSサービス(front-b/api-b/front-c/api-cいずれか)のARN指定で絞る。デプロイされたタスク定義(=イメージタグ)を特定するために付与
+  - `ecr:PutImage`, `ecr:BatchGetImage`, `ecr:BatchDeleteImage` を特定のECRリポジトリ(front-b/api-b/front-c/api-cいずれか)のARN指定で絞る。ECRイメージのタグ付与・削除に必要
   - `ecs:DescribeTaskDefinition` はリソースレベルの権限に対応しておらず、ARNで絞ると `AccessDenied` になるため、Resourceは `*` とする(読み取り専用のアクション)
   - `sns:Publish` を、Lambdaが処理失敗時にSNSトピックに配信できるよう、特定のARNに絞って付与する
   - Lambdaが呼び出されるよう、特定のEventBridgeのARN指定でPrincipalを設定する

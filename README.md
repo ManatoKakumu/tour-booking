@@ -46,7 +46,7 @@ tour-booking/
 │   ├── adr/                   # 設計判断の記録(ADR)
 │   └── reviews/               # 設計・実装レビューの記録
 ├── templates/                 # 設計ドキュメント・レビューのテンプレート
-├── apps/                      # アプリケーション(front-b/front-c: Next.js、api-b/api-c: Django)
+├── apps/                      # アプリケーション(front-b/front-c: Next.js、api-b/api-c: Django、static-pages: 静的ページ)
 ├── local/                     # ローカル開発環境(docker compose)
 └── infra/                     # Terraformコード(サービス単位でディレクトリ・state分割)
 ```

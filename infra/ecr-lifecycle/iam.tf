@@ -52,9 +52,6 @@ resource "aws_iam_role_policy" "ecs_ecr_access" {
       {
         Effect = "Allow"
         Action = [
-          "ecs:ListServiceDeployments",
-          "ecs:DescribeServiceDeployments",
-          "ecs:DescribeServiceRevisions",
           "ecs:DescribeServices"
         ]
         Resource = each.value
@@ -64,7 +61,6 @@ resource "aws_iam_role_policy" "ecs_ecr_access" {
         Action = [
           "ecr:PutImage",
           "ecr:BatchGetImage",
-          "ecr:DescribeImages",
           "ecr:BatchDeleteImage"
         ]
         Resource = local.ecr_repository_arns[each.key]
