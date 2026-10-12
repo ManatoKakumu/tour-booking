@@ -19,7 +19,7 @@
 ### 通信経路
 - 画像取得リクエスト：OAC経由で画像保存S3バケットにルーティング。 `images` で始まるリクエストをルーティング
 - 静的ページリクエスト：OAC経由で静的ページ保存S3バケットにルーティング。 `/`, `/about`, `/terms` のリクエストをルーティング
-- 動的ページリクエスト：CloudFront VPC Origins経由でVPCにルーティング。上記以外のリクエストをルーティング
+- 動的ページリクエスト：CloudFront VPC Origins経由でVPCにルーティング。上記以外のリクエストをルーティング。ログイン状態で内容が変わるためキャッシュはせず、Hostヘッダーを含めてALBへ転送する(ALBがCognitoの `redirect_uri` の組み立てにHostを使うため)
 
 ### セキュリティ設計
 - CloudFront VPC Originsを作成すると、AWS管理のSGが作成されるので、これをALBのSG、Inboundで参照することで、ALBへの経路をCloudFront VPC Origins経由に絞ることができる

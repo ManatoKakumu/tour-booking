@@ -39,7 +39,7 @@
   - front-b/api-b/front-c/api-c用に4つ作成する
   - `ecs:ListServiceDeployments`, `ecs:DescribeServiceDeployments`, `ecs:DescribeServiceRevisions`, `ecs:DescribeServices` を特定のECSサービス(front-b/api-b/front-c/api-cいずれか)のARN指定で絞る。ECSデプロイサーキットブレーカーからデプロイ成功可否の情報を得るために付与
   - `ecr:PutImage`, `ecr:BatchGetImage`, `ecr:DescribeImages`, `ecr:BatchDeleteImage` を特定のECRリポジトリ(front-b/api-b/front-c/api-cいずれか)のARN指定で絞る。ECRイメージのタグ付与・削除に必要
-  - `ecs:DescribeTaskDefinition` をResourceは特定のECSタスク定義(family名がサービス名と一致、リビジョンはワイルドカード)のARNで付与
+  - `ecs:DescribeTaskDefinition` はリソースレベルの権限に対応しておらず、ARNで絞ると `AccessDenied` になるため、Resourceは `*` とする(読み取り専用のアクション)
   - `sns:Publish` を、Lambdaが処理失敗時にSNSトピックに配信できるよう、特定のARNに絞って付与する
   - Lambdaが呼び出されるよう、特定のEventBridgeのARN指定でPrincipalを設定する
 
