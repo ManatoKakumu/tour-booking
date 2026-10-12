@@ -18,6 +18,10 @@ def handler(event, context):
         except IndexError:
             pass  # current タグがまだ存在しない(初回デプロイ)場合はスキップ
         add_tag(repository_name, image_tag, "current")
+        # 過去にsuccessだったイメージが再びcurrentになった場合(ロールバックなど)、successタグが
+        # 残っているとライフサイクルポリシーの削除対象になるため外す(タグが無ければ何も起きない)
+        new_digest = get_digest(repository_name, "current")
+        remove_tag(repository_name, "success-" + new_digest.split(":")[-1][:12])
     elif event_name == "SERVICE_DEPLOYMENT_FAILED":
         deployment_id = event["detail"]["deploymentId"]
         repository_name, image_tag = get_deployment_image(cluster_name, service_name, deployment_id)
@@ -54,12 +58,16 @@ def add_tag(repository_name, existing_tag, new_tag):
 
     # 取得したマニフェストを使って、新しいタグとして登録する
     # (画像データ自体は再アップロードせず、同じ中身に別のタグを貼るだけ)
-    ecr.put_image(
-        repositoryName=repository_name,
-        imageTag=new_tag,
-        imageManifest=image["imageManifest"],
-        imageManifestMediaType=image["imageManifestMediaType"],
-    )
+    try:
+        ecr.put_image(
+            repositoryName=repository_name,
+            imageTag=new_tag,
+            imageManifest=image["imageManifest"],
+            imageManifestMediaType=image["imageManifestMediaType"],
+        )
+    except ecr.exceptions.ImageAlreadyExistsException:
+        # 同じイメージに同じタグが既に付いている(ロールバック後に同じイメージを再デプロイした場合など)
+        pass
 
 def remove_tag(repository_name, tag):
     ecr.batch_delete_image(

@@ -16,7 +16,7 @@
 
 ### 通信経路
 - ALBサブネット
-  - localのみ、明示的な追加なし
+  - 0.0.0.0/0 NAT Gateway(`authenticate-cognito`では、ALB自身がCognitoのトークンエンドポイント・ユーザー情報エンドポイントへHTTPSで接続するため)
 - ECS(フロント)サブネット
   - S3Gateway エンドポイント
 - ECS(API)サブネット
@@ -33,6 +33,7 @@
   - ECS(API)から外部APIを呼び出す際に、NAT Gateway→IGW経路で通信をするため、IGWが必要になる
 - NAT Gateway
   - 外部APIを呼び出す際に必要
+  - ALBが`authenticate-cognito`でCognitoのエンドポイントへ接続する際にも必要
   - 従来のZonalだとサブネットをAZの数だけ用意する必要があり、運用コストが若干上がる。一方で、Regionalはサブネットの作成なしに、自動的にマルチAZ構成で可用性が確保される点で、運用コストの観点から優位。なお、両者の起動時間当たり、および通信料にかかる金銭的コストは同じであるため、Regionalが妥当と判断
   - https://aws.amazon.com/jp/vpc/pricing/
   - ただし、Regionalはプライベート接続に対応しておらず、今回はプライベート接続が不要なため、Regionalを使える

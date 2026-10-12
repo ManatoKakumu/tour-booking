@@ -3,13 +3,13 @@
 ## 要件・前提
 - ALB
   - Inbound：CloudFront
-  - Outbound：ECS(フロント・API)
+  - Outbound：ECS(フロント・API), Cognito(トークン・ユーザー情報エンドポイント、443。Cognitoのドメインは固定IPを持たないため、宛先は0.0.0.0/0)
 - ECS(フロント)
   - Inbound：ALB
   - Outbound：VPCエンドポイント(ecr.api/ecr.dkr/logs), S3(Gateway経由)
 - ECS(API)
   - Inbound：ALB
-  - Outbound：RDS, VPCエンドポイント(ecr.api/ecr.dkr/logs), S3(画像用バケット, Gateway経由), NAT Gateway経由で外部API呼び出し
+  - Outbound：RDS, VPCエンドポイント(ecr.api/ecr.dkr/logs/secretsmanager), S3(画像用バケット, Gateway経由), NAT Gateway経由で外部API呼び出し
 - RDS
   - Inbound：ECS(API)
   - Outbound：なし。プライマリ - スタンバイ間の同期処理はSGの設定にかかわらずAWSが内部で自動的に処理するため、RDSは特に付与する必要はない
@@ -27,6 +27,9 @@
 - `要件・前提` に記載の内容を、SG参照をベースに許可ルールを追加する
   - SG参照にするのは、IPアドレス(CIDR)指定だと、ECSなどのスケーリングでIPアドレスが変更されるため、通信を維持するには広めのCIDRにしなければならない。ただそうすると不必要に大きな範囲を許可しかねないので、SG参照にすることで、SG付与されているリソースとの通信のみに絞ることが可能
   - Outboundはデフォルトで全通信を許可しているが、必要な通信のみを許可する、最小権限の原則を反映した形で進める
+- ALBのOutboundのみ、443で0.0.0.0/0を許可する
+  - `authenticate-cognito` ではALB自身がCognitoのエンドポイントへ接続するが、Cognitoのドメインは固定IPを持たず、宛先を絞る手段がないため
+  - ECS(API)で0.0.0.0/0を避けているのは、コンテナが侵害された場合に任意の宛先へ情報を送信されるのを防ぐためである。ALBはAWS管理のサービスで、任意のコードが動く場所ではないため、同じリスクは当てはまらないと判断した
 - ECS(API)の外部API呼び出しの絞り込み方針
   - Stripeが公開している、API通信用のIPアドレス一覧を参照する
   - IPアドレス一覧をマネージドプレフィックスリストに登録する

@@ -1,6 +1,6 @@
 resource "aws_security_group" "alb" {
   name        = "alb-sg"
-  description = "Allows inbound from CloudFront, outbound to ECS front/API"
+  description = "Allows inbound from CloudFront, outbound to ECS front/API and Cognito endpoints"
   vpc_id      = aws_vpc.main.id
 
   tags = {
@@ -10,7 +10,7 @@ resource "aws_security_group" "alb" {
 
 resource "aws_security_group" "ecs_front" {
   name        = "ecs-front-sg"
-  description = "Allows inbound from ALB, outbound to VPC endpoints"
+  description = "Allows inbound from ALB, outbound to VPC endpoints and S3"
   vpc_id      = aws_vpc.main.id
 
   tags = {
@@ -30,7 +30,7 @@ resource "aws_security_group" "ecs_api" {
 
 resource "aws_security_group" "rds" {
   name        = "rds-sg"
-  description = "Allows inbound from ECS API, outbound for replication sync"
+  description = "Allows inbound from ECS API"
   vpc_id      = aws_vpc.main.id
 
   tags = {

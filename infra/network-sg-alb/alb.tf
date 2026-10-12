@@ -118,12 +118,16 @@ resource "aws_lb_listener_rule" "b_api" {
     order = 1
 
     authenticate_cognito {
-      user_pool_arn       = aws_cognito_user_pool.b.arn
-      user_pool_client_id = aws_cognito_user_pool_client.b.id
-      user_pool_domain    = aws_cognito_user_pool_domain.b.domain
+      # APIはブラウザのfetchから呼ばれるため、未認証時はログイン画面へリダイレクトせず401を返す
+      on_unauthenticated_request = "deny"
+      user_pool_arn              = aws_cognito_user_pool.b.arn
+      user_pool_client_id        = aws_cognito_user_pool_client.b.id
+      user_pool_domain           = aws_cognito_user_pool_domain.b.domain
       # B用とC用でセッションCookie名を分ける。既定名のままだと、片方のUser Poolで
       # ログインしたCookieが、もう片方のルールでも「認証済み」として通ってしまう
       session_cookie_name = "TourBookingAuthSessionB"
+      # 短すぎると再ログインが頻発し、長すぎるとセッション乗っ取り時の被害が広がるため6時間とする
+      session_timeout = 21600
     }
   }
 
@@ -155,6 +159,8 @@ resource "aws_lb_listener_rule" "b_front" {
       # B用とC用でセッションCookie名を分ける。既定名のままだと、片方のUser Poolで
       # ログインしたCookieが、もう片方のルールでも「認証済み」として通ってしまう
       session_cookie_name = "TourBookingAuthSessionB"
+      # 短すぎると再ログインが頻発し、長すぎるとセッション乗っ取り時の被害が広がるため6時間とする
+      session_timeout = 21600
     }
   }
 
@@ -180,12 +186,16 @@ resource "aws_lb_listener_rule" "c_api" {
     order = 1
 
     authenticate_cognito {
-      user_pool_arn       = aws_cognito_user_pool.c.arn
-      user_pool_client_id = aws_cognito_user_pool_client.c.id
-      user_pool_domain    = aws_cognito_user_pool_domain.c.domain
+      # APIはブラウザのfetchから呼ばれるため、未認証時はログイン画面へリダイレクトせず401を返す
+      on_unauthenticated_request = "deny"
+      user_pool_arn              = aws_cognito_user_pool.c.arn
+      user_pool_client_id        = aws_cognito_user_pool_client.c.id
+      user_pool_domain           = aws_cognito_user_pool_domain.c.domain
       # B用とC用でセッションCookie名を分ける。既定名のままだと、片方のUser Poolで
       # ログインしたCookieが、もう片方のルールでも「認証済み」として通ってしまう
       session_cookie_name = "TourBookingAuthSessionC"
+      # 短すぎると再ログインが頻発し、長すぎるとセッション乗っ取り時の被害が広がるため6時間とする
+      session_timeout = 21600
     }
   }
 
@@ -217,6 +227,8 @@ resource "aws_lb_listener_rule" "c_front" {
       # B用とC用でセッションCookie名を分ける。既定名のままだと、片方のUser Poolで
       # ログインしたCookieが、もう片方のルールでも「認証済み」として通ってしまう
       session_cookie_name = "TourBookingAuthSessionC"
+      # 短すぎると再ログインが頻発し、長すぎるとセッション乗っ取り時の被害が広がるため6時間とする
+      session_timeout = 21600
     }
   }
 

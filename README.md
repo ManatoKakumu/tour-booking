@@ -43,9 +43,10 @@ tour-booking/
 ├── docs/
 │   ├── WORKING_AGREEMENT.md   # Claudeの役割・レビュー観点・ガードレール
 │   ├── architecture/          # AWSサービス単位の設計ドキュメント
+│   ├── adr/                   # 設計判断の記録(ADR)
 │   └── reviews/               # 設計・実装レビューの記録
 ├── templates/                 # 設計ドキュメント・レビューのテンプレート
-├── apps/                      # アプリケーション(front-b/front-c: Next.js、api-b/api-c: Django)
+├── apps/                      # アプリケーション(front-b/front-c: Next.js、api-b/api-c: Django、static-pages: 静的ページ)
 ├── local/                     # ローカル開発環境(docker compose)
 └── infra/                     # Terraformコード(サービス単位でディレクトリ・state分割)
 ```
@@ -54,3 +55,5 @@ tour-booking/
 
 - 2026-07-26: リポジトリの土台を構築
 - 2026-08-30: Step2〜8前半の設計・実装が進行中(詳細は[docs/architecture/README.md](docs/architecture/README.md)参照)
+- 2026-09-04: ロードマップ(Step1〜10)の設計・実装が完了
+- 2026-10-10: アプリケーション(front-b/front-c・api-b/api-c)を実装し、構築済みのインフラへ組み込み
