@@ -7,8 +7,9 @@ resource "aws_cloudfront_origin_access_control" "s3" {
 
 resource "aws_cloudfront_vpc_origin" "alb" {
   vpc_origin_endpoint_config {
-    name                   = "tour-booking-alb"
-    arn                    = data.terraform_remote_state.network_sg_alb.outputs.alb_arn
+    name = "tour-booking-alb"
+    arn  = data.terraform_remote_state.network_sg_alb.outputs.alb_arn
+    # https-onlyのため使われないが、引数として必須
     http_port              = 80
     https_port             = 443
     origin_protocol_policy = "https-only"
@@ -129,8 +130,9 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   viewer_certificate {
-    acm_certificate_arn = data.terraform_remote_state.route53_acm.outputs.cloudfront_certificate_arn
-    ssl_support_method  = "sni-only"
+    acm_certificate_arn      = data.terraform_remote_state.route53_acm.outputs.cloudfront_certificate_arn
+    ssl_support_method       = "sni-only"
+    minimum_protocol_version = "TLSv1.2_2021"
   }
 
   restrictions {
