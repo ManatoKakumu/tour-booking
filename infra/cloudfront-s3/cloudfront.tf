@@ -7,8 +7,8 @@ resource "aws_cloudfront_origin_access_control" "s3" {
 
 resource "aws_cloudfront_vpc_origin" "alb" {
   vpc_origin_endpoint_config {
-    name                   = "tour-booking-alb"
-    arn                    = data.terraform_remote_state.network_sg_alb.outputs.alb_arn
+    name = "tour-booking-alb"
+    arn  = data.terraform_remote_state.network_sg_alb.outputs.alb_arn
     # https-onlyのため使われないが、引数として必須
     http_port              = 80
     https_port             = 443
