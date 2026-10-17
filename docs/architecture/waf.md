@@ -18,6 +18,7 @@
   - CloudFront(us-east-1)：SQLインジェクション、XSS、DDos対策のマネージドルールを付与。CloudFrontに付与する場合は、WAFをus-east-1に作成しなければいけない制約に注意
   - Cognito B側ユーザープール(ap-northeast-1)：DDos対策を付与。B側はMFAログインを必須にしており、アカウント乗っ取りリスクが低いと判断し、DDosのみとする
   - Cognito C側ユーザープール(ap-northeast-1)：DDos対策を付与。C側はMFAを有効にしていないので、アカウント乗っ取り対策をする必要がある。しかし、CognitoユーザープールにはATPを含むWeb ACLを関連付けられない制約があったため、Cognito自身のThreat Protectionで行うようにした
+- Cognito用Web ACLへのSQLインジェクション対策は付与しない。マネージドログインはリクエスト本体をWAFに転送しないため、ログイン画面で入力されたユーザー名・パスワードは検査できない。また、Cognito内部のデータベースはAWSの管理範囲である
 - Cognito用Web ACLのステートは、WAF用のステートに配置する。Cognitoに付与するとはいえ、Webアプリケーションへの攻撃を軽減する、という役割から、WAFと同じであると判断したため。
 
 ### 通信経路
