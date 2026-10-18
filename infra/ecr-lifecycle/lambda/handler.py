@@ -57,7 +57,7 @@ def add_tag(repository_name, existing_tag, new_tag):
     )["images"][0]
 
     # 取得したマニフェストを使って、新しいタグとして登録する
-    # (画像データ自体は再アップロードせず、同じ中身に別のタグを貼るだけ)
+    # (イメージのレイヤー自体は再アップロードせず、同じマニフェストに別のタグを付けるだけ)
     try:
         ecr.put_image(
             repositoryName=repository_name,

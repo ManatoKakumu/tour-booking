@@ -27,7 +27,7 @@ resource "aws_ecr_lifecycle_policy" "front_c" {
     rules = [
       {
         rulePriority = 1
-        description  = "「success」タグの画像は直近5件のみ残す"
+        description  = "「success」タグのイメージは直近5件のみ残す"
         selection = {
           tagStatus     = "tagged"
           tagPrefixList = ["success"]
@@ -42,7 +42,7 @@ resource "aws_ecr_lifecycle_policy" "front_c" {
       },
       {
         rulePriority = 2
-        description  = "「fail」タグの画像を30日で削除"
+        description  = "「fail」タグのイメージを30日で削除"
         selection = {
           tagStatus     = "tagged"
           tagPrefixList = ["fail"]
@@ -66,7 +66,7 @@ resource "aws_ecr_lifecycle_policy" "api_c" {
     rules = [
       {
         rulePriority = 1
-        description  = "「success」タグの画像は直近5件のみ残す"
+        description  = "「success」タグのイメージは直近5件のみ残す"
         selection = {
           tagStatus     = "tagged"
           tagPrefixList = ["success"]
@@ -81,7 +81,7 @@ resource "aws_ecr_lifecycle_policy" "api_c" {
       },
       {
         rulePriority = 2
-        description  = "「fail」タグの画像を30日で削除"
+        description  = "「fail」タグのイメージを30日で削除"
         selection = {
           tagStatus     = "tagged"
           tagPrefixList = ["fail"]
