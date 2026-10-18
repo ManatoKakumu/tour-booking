@@ -68,7 +68,7 @@ resource "aws_wafv2_web_acl" "cloudfront" {
 
   rule {
     name     = "sqli-rule-set"
-    priority = 4
+    priority = 2
 
     override_action {
       none {}
@@ -95,6 +95,61 @@ resource "aws_wafv2_web_acl" "cloudfront" {
     visibility_config {
       cloudwatch_metrics_enabled = true
       metric_name                = "sqli-rule-set"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "bad-input-rule-set"
+    priority = 3
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesKnownBadInputsRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "bad-input-rule-set"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "ddos-rule-set"
+    priority = 4
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesAntiDDoSRuleSet"
+        vendor_name = "AWS"
+
+        managed_rule_group_configs {
+          aws_managed_rules_anti_ddos_rule_set {
+            client_side_action_config {
+              challenge {
+                usage_of_action = "DISABLED"
+              }
+            }
+            sensitivity_to_block = "MEDIUM"
+          }
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "ddos-rule-set"
       sampled_requests_enabled   = true
     }
   }
@@ -147,61 +202,6 @@ resource "aws_wafv2_web_acl" "cloudfront" {
     visibility_config {
       cloudwatch_metrics_enabled = true
       metric_name                = "block-body-rules-except-image-upload"
-      sampled_requests_enabled   = true
-    }
-  }
-
-  rule {
-    name     = "bad-input-rule-set"
-    priority = 2
-
-    override_action {
-      none {}
-    }
-
-    statement {
-      managed_rule_group_statement {
-        name        = "AWSManagedRulesKnownBadInputsRuleSet"
-        vendor_name = "AWS"
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "bad-input-rule-set"
-      sampled_requests_enabled   = true
-    }
-  }
-
-  rule {
-    name     = "ddos-rule-set"
-    priority = 3
-
-    override_action {
-      none {}
-    }
-
-    statement {
-      managed_rule_group_statement {
-        name        = "AWSManagedRulesAntiDDoSRuleSet"
-        vendor_name = "AWS"
-
-        managed_rule_group_configs {
-          aws_managed_rules_anti_ddos_rule_set {
-            client_side_action_config {
-              challenge {
-                usage_of_action = "DISABLED"
-              }
-            }
-            sensitivity_to_block = "MEDIUM"
-          }
-        }
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "ddos-rule-set"
       sampled_requests_enabled   = true
     }
   }
