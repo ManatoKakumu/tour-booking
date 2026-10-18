@@ -35,7 +35,7 @@
 #### IAMロール
 - EventBridge
   - `lambda:InvokeFunction` を特定のLambdaのARN指定で絞る。Lambda起動に必要
-  - Lambda関数は4つあるので、ルールを4つ生成する。 `resources` フィールドにどのECSからのイベント化がわかるので、それを用いて起動するLambdaを識別する
+  - Lambda関数は4つあるので、ルールを4つ生成する。 `resources` フィールドにどのECSからのイベントかがわかるので、それを用いて起動するLambdaを識別する
 - Lambda
   - front-b/api-b/front-c/api-c用に4つ作成する
   - `ecs:DescribeServices` を特定のECSサービス(front-b/api-b/front-c/api-cいずれか)のARN指定で絞る。デプロイされたタスク定義(=イメージタグ)を特定するために付与
